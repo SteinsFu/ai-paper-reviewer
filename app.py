@@ -23,8 +23,9 @@ st.set_page_config(page_title="AI Paper Reviewer", page_icon="📝")
 
 st.title("AI Paper Reviewer")
 st.write(
-    "Upload a manuscript (PDF or text) or paste it below to get a structured, "
-    "peer-review-style report. This is a prototype for pre-submission feedback."
+    "Upload a document (PDF or text) or paste it below to get a structured "
+    "review. Switch modes depending on whether you are reviewing an academic "
+    "paper or a university report."
 )
 
 if not os.getenv("AWS_BEARER_TOKEN_BEDROCK"):
@@ -32,6 +33,17 @@ if not os.getenv("AWS_BEARER_TOKEN_BEDROCK"):
         "AWS_BEARER_TOKEN_BEDROCK is not set. Copy .env.example to .env and add "
         "your Bedrock API key, then restart the app."
     )
+
+MODE_CHOICES = {
+    "Academic paper": "paper",
+    "University report": "report",
+}
+mode_label = st.radio(
+    "Document type",
+    list(MODE_CHOICES.keys()),
+    horizontal=True,
+)
+mode = MODE_CHOICES[mode_label]
 
 _default_label = next(
     (label for label, mid in MODEL_CHOICES.items() if mid == DEFAULT_MODEL),
@@ -44,8 +56,14 @@ model_label = st.selectbox(
 )
 model = MODEL_CHOICES[model_label]
 
-uploaded = st.file_uploader("Upload paper", type=["pdf", "txt", "md"])
-pasted = st.text_area("...or paste the paper text here", height=200)
+_upload_label = "Upload paper" if mode == "paper" else "Upload report"
+_paste_label = (
+    "...or paste the paper text here"
+    if mode == "paper"
+    else "...or paste the report text here"
+)
+uploaded = st.file_uploader(_upload_label, type=["pdf", "txt", "md"])
+pasted = st.text_area(_paste_label, height=200)
 
 if st.button("Generate Review", type="primary"):
     paper_text = ""
@@ -65,27 +83,34 @@ if st.button("Generate Review", type="primary"):
         st.error("Could not extract any text from the input.")
         st.stop()
 
-    with st.spinner("Reviewing the manuscript..."):
+    _doc_label = "manuscript" if mode == "paper" else "report"
+
+    with st.spinner(f"Reviewing the {_doc_label}..."):
         try:
-            result = review_paper(paper_text, model=model)
+            result = review_paper(paper_text, model=model, mode=mode)
         except Exception as exc:  # noqa: BLE001 - surface any API error to the user
             st.error(f"Review failed: {exc}")
             st.stop()
 
     if result.truncated:
         st.info(
-            "The manuscript was long and has been truncated for this prototype; "
-            "the review covers the beginning of the paper."
+            f"The {_doc_label} was long and has been truncated for this "
+            f"prototype; the review covers the beginning of the {_doc_label}."
         )
 
     st.markdown("---")
     st.markdown(result.markdown)
 
-    with st.spinner("Checking novelty and citations..."):
+    _issue_spinner = (
+        "Checking novelty and citations..."
+        if mode == "paper"
+        else "Checking engagement and citations..."
+    )
+    with st.spinner(_issue_spinner):
         try:
-            issues = run_novelty_review(paper_text, model=model)
+            issues = run_novelty_review(paper_text, model=model, mode=mode)
         except Exception as exc:  # noqa: BLE001 - surface any error to the user
-            st.error(f"Novelty/citation review failed: {exc}")
+            st.error(f"Literature review failed: {exc}")
             st.stop()
 
     st.markdown("---")

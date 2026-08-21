@@ -29,6 +29,9 @@ MAX_PARSE_CHARS = 40_000
 MAX_ANALYSIS_CHARS = 40_000
 MAX_REFERENCE_CHARS = 20_000
 
+Mode = str  # "paper" | "report"
+DEFAULT_MODE: Mode = "paper"
+
 
 @dataclass
 class Issue:
@@ -154,7 +157,7 @@ def _parse_manuscript(text: str, model: str, client: Any) -> dict[str, Any]:
 # novelty assessment (LLM-only, based on Claude's training knowledge)
 # ---------------------------------------------------------------------------
 
-_NOVELTY_SYSTEM_PROMPT = """You assess the novelty of a research manuscript's main claims against your own training knowledge of published work in the field.
+_NOVELTY_SYSTEM_PROMPT_PAPER = """You assess the novelty of a research manuscript's main claims against your own training knowledge of published work in the field.
 
 Only flag a claim when you can, with high confidence, point to specific prior work whose contribution substantively subsumes the flagged claim as a whole. General thematic overlap with a research area is NOT sufficient to flag.
 
@@ -180,30 +183,70 @@ Ground rules:
 """
 
 
+_NOVELTY_SYSTEM_PROMPT_REPORT = """You assess a university student's report for depth of engagement with the material.
+
+The student is NOT expected to produce novel research. Judge whether the report goes beyond restating what sources say and shows the student's own analysis, interpretation, synthesis across sources, or informed opinion.
+
+Flag passages where the student:
+- Merely restates or summarizes a source's content without adding analysis.
+- Presents a widely-known fact as a personal insight without engagement.
+- Introduces a topic but does not develop it beyond a surface description.
+
+For each issue, return via the provided tool:
+- category: "shallow_engagement".
+- severity: "high" | "medium" | "low".
+- title: short one-line summary.
+- description: 1-2 sentences explaining what is superficial and why deeper engagement would help.
+- evidence: the exact passage from the report being flagged.
+- suggestion: concrete advice on how to add depth (analysis, comparison across sources, critique, connection to course concepts).
+- related_refs: leave empty.
+
+Ground rules:
+- Do NOT flag legitimate factual claims that are properly cited and used to support an argument.
+- Do NOT expect novel research contributions.
+- Only emit issues that would genuinely help the student improve. If the report shows generally solid engagement, return an empty issues array.
+"""
+
+
+_NOVELTY_PROMPTS: dict[str, str] = {
+    "paper": _NOVELTY_SYSTEM_PROMPT_PAPER,
+    "report": _NOVELTY_SYSTEM_PROMPT_REPORT,
+}
+
+
+_NOVELTY_TOOL_NAMES: dict[str, tuple[str, str]] = {
+    "paper": ("record_novelty_issues", "Record novelty concerns for the manuscript."),
+    "report": ("record_engagement_issues", "Record passages showing shallow engagement."),
+}
+
+
 def _check_novelty(
     meta: dict[str, Any],
     model: str,
     client: Any,
+    mode: Mode = DEFAULT_MODE,
 ) -> list[Issue]:
     claims = meta.get("claims") or []
     if not claims:
         return []
 
+    label = "Manuscript title" if mode == "paper" else "Report title"
     payload_lines = [
-        f"Manuscript title: {meta.get('title', '')}",
+        f"{label}: {meta.get('title', '')}",
         "",
         "Main claims:",
     ]
     for i, claim in enumerate(claims, 1):
         payload_lines.append(f"{i}. {claim}")
 
+    tool_name, tool_desc = _NOVELTY_TOOL_NAMES[mode]
     data = converse_json(
         model_id=model,
-        system_prompt=_NOVELTY_SYSTEM_PROMPT,
+        system_prompt=_NOVELTY_PROMPTS[mode],
         user_message="\n".join(payload_lines),
         schema=_ISSUES_SCHEMA,
-        tool_name="record_novelty_issues",
-        tool_description="Record novelty concerns for the manuscript.",
+        tool_name=tool_name,
+        tool_description=tool_desc,
         temperature=0.2,
         client=client,
     )
@@ -214,7 +257,7 @@ def _check_novelty(
 # missing citation detection (Type B: passages that require a citation)
 # ---------------------------------------------------------------------------
 
-_MISSING_CITATION_SYSTEM_PROMPT = """You review academic manuscripts to find passages where a citation is expected but missing.
+_MISSING_CITATION_SYSTEM_PROMPT_PAPER = """You review academic manuscripts to find passages where a citation is expected but missing.
 
 Look for:
 - Empirical claims, statistics, or historical facts stated without a citation.
@@ -243,16 +286,53 @@ Other ground rules:
 """
 
 
+_MISSING_CITATION_SYSTEM_PROMPT_REPORT = """You review a university student's report to find passages where a citation is expected but missing. This is a teaching moment: your goal is to help the student learn proper citation practice.
+
+Look for:
+- Factual claims, statistics, or historical facts stated without a source.
+- References to prior research or knowledge ("studies have shown", "it is well known", "experts agree") without attribution.
+- Discussion of established concepts, definitions, or theories without citing the source.
+- Ideas or wording that clearly come from another source but are presented without attribution.
+
+For each issue, return via the provided tool:
+- category: "citation_missing".
+- severity: "high" | "medium" | "low".
+- title: short one-line summary.
+- description: 1-2 sentences explaining why a citation is expected here, phrased constructively for a student.
+- evidence: the exact passage from the report (quote verbatim, trimmed to at most ~40 words).
+- suggestion: concrete advice on what kind of source to cite (e.g. "a textbook on X", "a peer-reviewed study on Y"). Only name a specific paper if you are highly confident it exists.
+- related_refs: leave empty unless you can name a specific, real work with confidence.
+
+Verification rule (critical to avoid false positives):
+- Before emitting an issue, re-read the sentence AND its immediate neighbours to check whether a citation is already present. Citations may take many forms: "(Author, YEAR)", "Author (YEAR)", numeric like "[3]", superscripts, or footnote markers. If a citation is present nearby, DO NOT emit.
+- If your own explanation would say "this is actually already cited", DROP the issue entirely.
+
+Other ground rules:
+- Do not fabricate references.
+- Do not flag the student's own opinions or personal observations.
+- Do not flag every sentence; only ones where a citation is genuinely expected.
+- If nothing is missing, call the tool with an empty issues array.
+"""
+
+
+_MISSING_CITATION_PROMPTS: dict[str, str] = {
+    "paper": _MISSING_CITATION_SYSTEM_PROMPT_PAPER,
+    "report": _MISSING_CITATION_SYSTEM_PROMPT_REPORT,
+}
+
+
 def _check_missing_citations(
     text: str,
     model: str,
     client: Any,
+    mode: Mode = DEFAULT_MODE,
 ) -> list[Issue]:
     body = text[:MAX_ANALYSIS_CHARS]
+    label = "Manuscript text" if mode == "paper" else "Report text"
     data = converse_json(
         model_id=model,
-        system_prompt=_MISSING_CITATION_SYSTEM_PROMPT,
-        user_message=f"Manuscript text:\n\n{body}",
+        system_prompt=_MISSING_CITATION_PROMPTS[mode],
+        user_message=f"{label}:\n\n{body}",
         schema=_ISSUES_SCHEMA,
         tool_name="record_missing_citations",
         tool_description="Record passages that need a citation.",
@@ -266,7 +346,7 @@ def _check_missing_citations(
 # reference list quality (formal quality of the bibliography)
 # ---------------------------------------------------------------------------
 
-_REFERENCE_QUALITY_SYSTEM_PROMPT = """You evaluate the reference list of a research manuscript for formal quality and coverage.
+_REFERENCE_QUALITY_SYSTEM_PROMPT_PAPER = """You evaluate the reference list of a research manuscript for formal quality and coverage.
 
 The reference list you receive is the raw text extracted from the manuscript's References section. It may contain line-break artifacts, hyphenated word breaks, and page numbers merged into entries. Treat these as PDF-extraction noise, NOT as errors in the bibliography itself.
 
@@ -308,6 +388,48 @@ Ground rules:
 """
 
 
+_REFERENCE_QUALITY_SYSTEM_PROMPT_REPORT = """You evaluate the reference list of a university student's report for appropriateness and coverage.
+
+The reference list you receive is raw text extracted from the report's References section. It may contain line-break artifacts, hyphenated word breaks, and page numbers merged into entries. Treat these as PDF-extraction noise, NOT as errors in the bibliography itself.
+
+Expectations for a typical undergraduate report (~8 pages):
+- Around 5-15 references is normal. Fewer than 4 is thin; more than 20 is unusual for the scope.
+- A mix of source types (textbooks, peer-reviewed articles, and where appropriate, reputable web sources) is healthy.
+- Sources should be relevant to the report's topic. Wildly off-topic sources or an over-reliance on non-scholarly sources (blogs, Wikipedia as a primary source) is worth flagging as a teaching moment.
+
+Consider:
+- Whether the reference count is appropriate for the report's scope and claims.
+- Whether the mix of source types is reasonable, or whether the student is over-relying on a single type of source.
+- Whether specific entries look implausible (fabricated, wrong topic, or clearly unreliable).
+
+Do NOT flag as issues:
+- Formatting issues such as broken words, missing spaces, or line-break artifacts (these are extraction noise).
+- Individual entries whose author names or titles look slightly off — likely extraction noise.
+- ANY concern about the year associated with an arXiv preprint reference, under any framing. Never flag arXiv-id/year mismatches.
+- Any claim that a specific arXiv identifier is wrong. Your training knowledge of arXiv ids is unreliable.
+- Missing coverage of "landmark" or "foundational" works unless the report clearly claims to survey the field — student reports are not expected to be exhaustive literature reviews.
+
+For each real issue, return via the provided tool:
+- category: "reference_quality".
+- severity: "high" | "medium" | "low".
+- title: short one-line summary.
+- description: 1-2 sentences phrased constructively for a student.
+- evidence: the specific reference entry or a short description of the pattern.
+- suggestion: concrete, teaching-oriented advice.
+- related_refs: leave empty unless you can name a specific real work with confidence.
+
+Ground rules:
+- Do not fabricate references.
+- If the list looks appropriate for a student report of this scope, call the tool with an empty issues array.
+"""
+
+
+_REFERENCE_QUALITY_PROMPTS: dict[str, str] = {
+    "paper": _REFERENCE_QUALITY_SYSTEM_PROMPT_PAPER,
+    "report": _REFERENCE_QUALITY_SYSTEM_PROMPT_REPORT,
+}
+
+
 # Findings that mention an arXiv id and any year mismatch are almost always
 # spurious — the LLM keeps flagging normal preprint-year discrepancies despite
 # repeated prompt instructions. Filter them out post hoc as a safety net.
@@ -329,25 +451,33 @@ def _check_reference_list_quality(
     meta: dict[str, Any],
     model: str,
     client: Any,
+    mode: Mode = DEFAULT_MODE,
 ) -> list[Issue]:
     references_raw = (meta.get("references_raw") or "").strip()
     if not references_raw:
+        missing_desc_paper = (
+            "No References or Bibliography section was found in the "
+            "manuscript text. A paper of this scope is expected to "
+            "provide a proper reference list."
+        )
+        missing_desc_report = (
+            "No References or Bibliography section was found in the "
+            "report. A report of this length is normally expected to cite "
+            "some sources; consider adding a reference list."
+        )
         return [
             Issue(
                 category="reference_quality",
                 severity="high",
                 title="Reference list is missing or could not be located",
-                description=(
-                    "No References or Bibliography section was found in the "
-                    "manuscript text. A paper of this scope is expected to "
-                    "provide a proper reference list."
-                ),
+                description=missing_desc_paper if mode == "paper" else missing_desc_report,
                 suggestion="Add a References section with proper bibliographic entries.",
             )
         ]
 
+    doc_label = "Manuscript" if mode == "paper" else "Report"
     payload_lines = [
-        f"Manuscript title: {meta.get('title', '')}",
+        f"{doc_label} title: {meta.get('title', '')}",
         f"Abstract: {meta.get('abstract', '')}",
         "",
         "Main claims:",
@@ -356,15 +486,15 @@ def _check_reference_list_quality(
         payload_lines.append(f"{i}. {claim}")
     payload_lines.append("")
     payload_lines.append(
-        "Raw References section as extracted from the manuscript (verbatim, "
-        "may include line-break artifacts from PDF extraction — treat those as "
-        "extraction noise, not as errors in the bibliography):"
+        f"Raw References section as extracted from the {doc_label.lower()} "
+        "(verbatim, may include line-break artifacts from PDF extraction — "
+        "treat those as extraction noise, not as errors in the bibliography):"
     )
     payload_lines.append(references_raw)
 
     data = converse_json(
         model_id=model,
-        system_prompt=_REFERENCE_QUALITY_SYSTEM_PROMPT,
+        system_prompt=_REFERENCE_QUALITY_PROMPTS[mode],
         user_message="\n".join(payload_lines),
         schema=_ISSUES_SCHEMA,
         tool_name="record_reference_quality_issues",
@@ -384,18 +514,21 @@ def _check_reference_list_quality(
 def run(
     paper_text: str,
     model: str = DEFAULT_MODEL,
+    mode: Mode = DEFAULT_MODE,
     client: Any = None,
 ) -> list[Issue]:
-    """Run the LLM-only literature-side review over a manuscript.
+    """Run the LLM-only literature-side review over a manuscript or report.
 
     Bedrock and JSON-parse errors propagate to the caller (fail-fast).
     """
     if not paper_text or not paper_text.strip():
         raise ValueError("No paper text provided.")
+    if mode not in _NOVELTY_PROMPTS:
+        raise ValueError(f"Unknown mode: {mode!r}. Expected one of {list(_NOVELTY_PROMPTS)}.")
 
     meta = _parse_manuscript(paper_text, model, client)
     return [
-        *_check_novelty(meta, model, client),
-        *_check_missing_citations(paper_text, model, client),
-        *_check_reference_list_quality(meta, model, client),
+        *_check_novelty(meta, model, client, mode=mode),
+        *_check_missing_citations(paper_text, model, client, mode=mode),
+        *_check_reference_list_quality(meta, model, client, mode=mode),
     ]
