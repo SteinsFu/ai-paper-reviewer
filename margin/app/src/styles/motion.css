@@ -1,0 +1,40 @@
+/* ============================================================
+   Margin — CSS micro-motion (springy stuff lives in motion/react)
+   ============================================================ */
+
+@keyframes fadeUp { from { transform: translateY(11px); opacity: 0; } to { transform: none; opacity: 1; } }
+.anim-in { animation: fadeUp .44s cubic-bezier(.22,.61,.36,1) both; }
+
+@keyframes pop { from { transform: scale(.98); } to { transform: none; } }
+
+/* one-shot flash when an annotation is selected in the manuscript */
+@keyframes markPulse {
+  0% { box-shadow: 0 0 0 0 var(--flash-color, var(--accent-soft-2)); }
+  60% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.mark-pulse { animation: markPulse .7s ease-out 1; }
+
+/* intro splash caret (caretBlink keyframes live in components.css) */
+.intro-caret {
+  display: inline-block;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  margin-left: 7px;
+  vertical-align: -0.12em;
+  animation: caretBlink 0.9s steps(2) infinite;
+}
+
+.spin-dot {
+  width: 13px; height: 13px; border-radius: 99px;
+  border: 2px solid var(--accent-soft-2);
+  border-top-color: var(--accent-deep);
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-in, .mark-pulse { animation: none; }
+  .skeleton::after { animation: none; }
+}

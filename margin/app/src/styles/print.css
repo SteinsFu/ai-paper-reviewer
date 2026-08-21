@@ -1,0 +1,51 @@
+/* ============================================================
+   Margin — print layout (report → Save as PDF)
+   Active only while body[data-printing="report"].
+   ============================================================ */
+
+@media print {
+  @page { margin: 2cm; }
+
+  body[data-printing="report"] {
+    overflow: visible !important;
+    background: #fff !important;
+    color: #1d1d1f !important;
+  }
+
+  /* force light tokens regardless of theme */
+  body[data-printing="report"] :root,
+  [data-theme="dark"] body[data-printing="report"] {
+    color-scheme: light;
+  }
+
+  body[data-printing="report"] .sidebar,
+  body[data-printing="report"] .topbar,
+  body[data-printing="report"] .chat-panel,
+  body[data-printing="report"] .chat-backdrop,
+  body[data-printing="report"] .palette,
+  body[data-printing="report"] .palette-backdrop,
+  body[data-printing="report"] .no-print {
+    display: none !important;
+  }
+
+  body[data-printing="report"] .app,
+  body[data-printing="report"] #root {
+    height: auto !important;
+    display: block !important;
+    background: #fff !important;
+  }
+  body[data-printing="report"] .main { height: auto !important; }
+  body[data-printing="report"] .screen { position: static !important; }
+  body[data-printing="report"] .screen-scroll { height: auto !important; overflow: visible !important; }
+
+  body[data-printing="report"] .card {
+    box-shadow: none !important;
+    border: 1px solid rgba(0,0,0,0.15) !important;
+    break-inside: avoid;
+    background: #fff !important;
+  }
+
+  body[data-printing="report"] textarea {
+    color: #1d1d1f !important;
+  }
+}
