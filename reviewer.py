@@ -1,15 +1,15 @@
-"""Core review logic backed by the OpenAI API."""
+"""Core review logic backed by Amazon Bedrock (Claude via Converse API)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-from openai import OpenAI
+from bedrock_client import HAIKU_4_5, converse_text
 
-# Character budget to keep the prototype within reasonable token limits.
 MAX_CHARS = 40_000
 
-DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_MODEL = HAIKU_4_5
 
 SYSTEM_PROMPT = """You are an experienced academic peer reviewer for a top-tier \
 venue. Review the manuscript provided by the user and return a structured report \
@@ -64,23 +64,20 @@ def _build_user_message(paper_text: str) -> tuple[str, bool]:
 def review_paper(
     paper_text: str,
     model: str = DEFAULT_MODEL,
-    client: OpenAI | None = None,
+    client: Any = None,
 ) -> ReviewResult:
     """Generate a structured peer review for the given manuscript text."""
     if not paper_text or not paper_text.strip():
         raise ValueError("No paper text provided.")
 
-    client = client or OpenAI()
     user_message, truncated = _build_user_message(paper_text)
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message},
-        ],
+    markdown = converse_text(
+        model_id=model,
+        system_prompt=SYSTEM_PROMPT,
+        user_message=user_message,
         temperature=0.3,
+        max_tokens=4096,
+        client=client,
     )
-
-    markdown = response.choices[0].message.content or ""
     return ReviewResult(markdown=markdown.strip(), truncated=truncated, model=model)

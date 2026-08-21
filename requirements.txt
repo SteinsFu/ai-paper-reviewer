@@ -1,4 +1,6 @@
 streamlit
-openai
+boto3
 pypdf
 python-dotenv
+requests
+pytest

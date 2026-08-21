@@ -7,12 +7,17 @@ import os
 import streamlit as st
 from dotenv import load_dotenv
 
+from bedrock_client import HAIKU_4_5, SONNET_4_5
+from novelty_review import run as run_novelty_review
 from pdf_utils import extract_text
 from reviewer import DEFAULT_MODEL, review_paper
 
 load_dotenv()
 
-MODELS = ["gpt-4o-mini", "gpt-4o"]
+MODEL_CHOICES = {
+    "Claude Haiku 4.5": HAIKU_4_5,
+    "Claude Sonnet 4.5": SONNET_4_5,
+}
 
 st.set_page_config(page_title="AI Paper Reviewer", page_icon="📝")
 
@@ -22,17 +27,22 @@ st.write(
     "peer-review-style report. This is a prototype for pre-submission feedback."
 )
 
-if not os.getenv("OPENAI_API_KEY"):
+if not os.getenv("AWS_BEARER_TOKEN_BEDROCK"):
     st.warning(
-        "OPENAI_API_KEY is not set. Copy .env.example to .env and add your key, "
-        "then restart the app."
+        "AWS_BEARER_TOKEN_BEDROCK is not set. Copy .env.example to .env and add "
+        "your Bedrock API key, then restart the app."
     )
 
-model = st.selectbox(
-    "Model",
-    MODELS,
-    index=MODELS.index(DEFAULT_MODEL) if DEFAULT_MODEL in MODELS else 0,
+_default_label = next(
+    (label for label, mid in MODEL_CHOICES.items() if mid == DEFAULT_MODEL),
+    next(iter(MODEL_CHOICES)),
 )
+model_label = st.selectbox(
+    "Model",
+    list(MODEL_CHOICES.keys()),
+    index=list(MODEL_CHOICES.keys()).index(_default_label),
+)
+model = MODEL_CHOICES[model_label]
 
 uploaded = st.file_uploader("Upload paper", type=["pdf", "txt", "md"])
 pasted = st.text_area("...or paste the paper text here", height=200)
@@ -70,3 +80,25 @@ if st.button("Generate Review", type="primary"):
 
     st.markdown("---")
     st.markdown(result.markdown)
+
+    with st.spinner("Checking novelty and citations..."):
+        try:
+            issues = run_novelty_review(paper_text, model=model)
+        except Exception as exc:  # noqa: BLE001 - surface any error to the user
+            st.error(f"Novelty/citation review failed: {exc}")
+            st.stop()
+
+    st.markdown("---")
+    st.subheader("Issues")
+    if not issues:
+        st.write("No novelty or citation issues detected.")
+    else:
+        for issue in issues:
+            st.markdown(f"**[{issue.severity}] {issue.title}** — `{issue.category}`")
+            st.markdown(issue.description)
+            if issue.evidence:
+                st.caption(f"Evidence: {issue.evidence}")
+            if issue.suggestion:
+                st.markdown(f"_Suggestion:_ {issue.suggestion}")
+            if issue.related_refs:
+                st.caption("Related: " + " / ".join(issue.related_refs))
