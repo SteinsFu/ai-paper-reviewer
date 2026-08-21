@@ -1,4 +1,11 @@
 streamlit
-openai
+boto3
 pypdf
 python-dotenv
+requests
+pytest
+fastapi
+uvicorn[standard]
+python-multipart
+sse-starlette
+httpx

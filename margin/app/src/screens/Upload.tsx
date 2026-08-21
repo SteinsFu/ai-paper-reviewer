@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Icon } from "../components/Icon";
@@ -9,19 +9,32 @@ import { CATEGORIES, CAT_ORDER } from "../data/mock";
 export function Upload() {
   const [drag, setDrag] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { data: lib } = useLibrary();
   const navigate = useNavigate();
   const recent = (lib ?? []).slice(0, 3);
 
-  function startAnalyze() { setAnalyzing(true); }
-  function finishAnalyze() {
-    // the mock pipeline always produces the sample review (p1)
-    navigate("/paper/p1/reader");
+  function startAnalyzeWith(picked: File | null) { setFile(picked); setAnalyzing(true); }
+  function openPicker() { fileInputRef.current?.click(); }
+  function finishAnalyze(paperId: string) {
+    navigate(`/paper/${paperId}/reader`);
   }
 
   return (
     <>
-      {analyzing && <Analyzing onDone={finishAnalyze}/>}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.txt,.md"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const picked = e.target.files?.[0] ?? null;
+          if (picked) startAnalyzeWith(picked);
+          e.target.value = ""; // let the same file trigger onChange again if re-selected
+        }}
+      />
+      {analyzing && <Analyzing file={file} onDone={finishAnalyze}/>}
       <div className="screen-scroll scroll anim-in">
         <div style={{ maxWidth:880, margin:"0 auto", padding:"64px 32px 80px" }}>
 
@@ -45,8 +58,14 @@ export function Upload() {
           <div
             onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
             onDragLeave={() => setDrag(false)}
-            onDrop={(e) => { e.preventDefault(); setDrag(false); startAnalyze(); }}
-            onClick={startAnalyze}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDrag(false);
+              const picked = e.dataTransfer.files?.[0] ?? null;
+              if (picked) startAnalyzeWith(picked);
+              else openPicker();
+            }}
+            onClick={openPicker}
             style={{
               border:`2px dashed ${drag ? "var(--accent)" : "var(--line-strong)"}`,
               background: drag ? "var(--accent-soft)" : "var(--grad-card)",
@@ -68,7 +87,7 @@ export function Upload() {
             <div style={{ fontSize:14.5, color:"var(--text-2)", marginBottom:22 }}>
               PDF, LaTeX source, or Word — up to 60 pages
             </div>
-            <button className="btn btn-primary btn-lg" onClick={(e) => { e.stopPropagation(); startAnalyze(); }}>
+            <button className="btn btn-primary btn-lg" onClick={(e) => { e.stopPropagation(); openPicker(); }}>
               <Icon name="doc" size={18}/> Choose a manuscript
             </button>
             <div style={{ marginTop:18, fontSize:12.5, color:"var(--text-3)" }}>
@@ -101,7 +120,7 @@ export function Upload() {
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {recent.map((p) => (
                   <button key={p.id} className="card card-hover"
-                    onClick={() => p.status === "draft" ? startAnalyze() : navigate(`/paper/${p.id}/reader`)}
+                    onClick={() => p.status === "draft" ? openPicker() : navigate(`/paper/${p.id}/reader`)}
                     style={{ display:"flex", alignItems:"center", gap:14, padding:"13px 16px",
                       textAlign:"left", border:"1px solid var(--line-2)", background:"var(--surface)" }}>
                     <div style={{ width:38, height:46, borderRadius:6, flex:"0 0 auto",

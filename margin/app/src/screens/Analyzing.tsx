@@ -6,30 +6,38 @@ import { api } from "../services";
 import type { PipelineStep } from "../services/types";
 
 /* Full-screen overlay driven by the service's analyze() progress events. */
-export function Analyzing({ onDone }: { onDone: () => void }) {
+export function Analyzing({ file, onDone }: { file?: File | null; onDone: (paperId: string) => void }) {
   const [step, setStep] = useState(0);
   const [pct, setPct] = useState(0);
   const [steps, setSteps] = useState<PipelineStep[]>([]);
   const [finishing, setFinishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      for await (const p of api.analyze({})) {
-        if (cancelled) return;
-        setStep(p.step);
-        setPct(p.pct);
-        setSteps(p.steps);
-        if (p.done) {
-          setFinishing(true);
-          setTimeout(() => { if (!cancelled) onDoneRef.current(); }, 750);
+      try {
+        let landingId = "p1"; // fallback for mock; overwritten by the server's paperId
+        for await (const p of api.analyze({ file: file ?? undefined, fileName: file?.name })) {
+          if (cancelled) return;
+          setStep(p.step);
+          setPct(p.pct);
+          setSteps(p.steps);
+          if (p.error) { setError(p.error); return; }
+          if (p.paperId) landingId = p.paperId;
+          if (p.done) {
+            setFinishing(true);
+            setTimeout(() => { if (!cancelled) onDoneRef.current(landingId); }, 750);
+          }
         }
+      } catch (e) {
+        if (!cancelled) setError(String((e as Error)?.message ?? e));
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [file]);
 
   return (
     <AnimatePresence>
@@ -44,10 +52,10 @@ export function Analyzing({ onDone }: { onDone: () => void }) {
             <ScoreRing value={pct} size={96} stroke={7}/>
           </div>
           <h2 style={{ fontSize:24, fontWeight:700, letterSpacing:"-0.02em", margin:"0 0 6px" }}>
-            Reading your manuscript
+            {error ? "Analysis failed" : "Reading your manuscript"}
           </h2>
-          <p style={{ fontSize:14.5, color:"var(--text-2)", margin:"0 0 30px" }}>
-            Attention-Guided Summarization of Long Scientific Do…
+          <p style={{ fontSize:14.5, color: error ? "var(--danger, #d43a3a)" : "var(--text-2)", margin:"0 0 30px" }}>
+            {error ?? (file?.name ?? "Untitled manuscript")}
           </p>
 
           <div className="card" style={{ padding:"10px 8px", textAlign:"left" }}>

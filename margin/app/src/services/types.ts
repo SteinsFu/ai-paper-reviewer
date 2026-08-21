@@ -275,10 +275,16 @@ export interface AnalyzeProgress {
   steps: PipelineStep[];
   pct: number;                 // 0–100
   done: boolean;
+  /** set on the `done: true` event so the caller knows which paper to open */
+  paperId?: string;
+  /** set on the `done: true` event when the pipeline failed on the server */
+  error?: string;
 }
 
 export interface AnalyzeInput {
   fileName?: string;
+  /** the manuscript file to upload; used by the HTTP backend, ignored by mock */
+  file?: File;
 }
 
 /* Chat */
