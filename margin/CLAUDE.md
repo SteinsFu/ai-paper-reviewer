@@ -74,17 +74,33 @@ command palette and the visual screen). The report screen honours `?print=1`.
   temporarily forces light theme and sets `body[data-printing="report"]`. Mark
   screen-only chrome with `.no-print`.
 
-## Swapping in the real AI backend (phase 2, not built)
+## Swapping in the real AI backend
 
-1. Create Vercel serverless functions under `app/api/` (e.g. `api/chat.ts`) using
-   `@anthropic-ai/sdk`: `client.messages.stream({ model: "claude-opus-4-8", system:
-   reviewer persona + serialized ReviewBundle, messages })`, piped out as an SSE /
-   ReadableStream response. Key lives in Vercel env `ANTHROPIC_API_KEY` — never in
-   client code.
-2. Implement `httpApi: MarginApi` and `httpCopilot: CopilotService` (read the fetch
-   body stream and yield text chunks — the UI already consumes `AsyncIterable<string>`).
-3. Wire both in `src/services/index.ts` behind `VITE_API_MODE=http`.
-   Nothing above the service layer should change.
+The review pipeline (parse, score, novelty, annotations, report, references)
+is now wired up. It lives outside `margin/` at the repo root as a Python +
+FastAPI service that calls **Amazon Bedrock** (Claude Haiku 4.5 / Sonnet 4.5
+via the Converse API) — not Vercel + Anthropic SDK. Sources:
+
+- `../../bundle_builder.py` — LLM tool-use schemas + `ReviewBundle` assembly.
+- `../../server.py` — FastAPI endpoints that mirror `MarginApi`.
+  `POST /analyze` streams progress via SSE; the final event carries
+  `{ paperId, ... }`. `AWS_BEARER_TOKEN_BEDROCK` env var is read from the
+  server's `.env` — never in client code.
+- `src/services/httpApi.ts` — real backend impl; selected in
+  `src/services/index.ts` when `VITE_API_MODE=http`.
+
+Copilot chat (`services/copilot.ts`) is still the mock — a streaming Bedrock
+implementation is planned but not built.
+
+Run locally (two terminals from the repo root):
+
+```bash
+# backend
+uvicorn server:app --port 8000 --reload
+
+# frontend
+cd margin/app && VITE_API_MODE=http VITE_API_BASE_URL=http://localhost:8000 npm run dev
+```
 
 ## Verification checklist
 

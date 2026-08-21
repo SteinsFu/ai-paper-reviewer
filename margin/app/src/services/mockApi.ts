@@ -31,7 +31,7 @@ async function* analyze(_input: AnalyzeInput): AsyncIterable<AnalyzeProgress> {
       done: false,
     };
   }
-  yield { step: steps.length, steps, pct: 100, done: true };
+  yield { step: steps.length, steps, pct: 100, done: true, paperId: "p1" };
 }
 
 export const mockApi: MarginApi = {
