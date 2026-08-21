@@ -52,6 +52,7 @@ _PARSE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "title": {"type": "string"},
+        "authors": {"type": "string"},
         "abstract": {"type": "string"},
         "claims": {"type": "array", "items": {"type": "string"}},
     },
@@ -89,6 +90,7 @@ _ISSUES_SCHEMA: dict[str, Any] = {
 _PARSE_SYSTEM_PROMPT = """You extract structured metadata from a research manuscript.
 Return the result via the provided tool with exactly these keys:
 - title: string. The paper's title.
+- authors: string. The full author list as a single comma-separated string (e.g. "Alice Author, Bob Author, Carol Author"). Use an empty string if the authors cannot be identified.
 - abstract: string. The paper's abstract.
 - claims: array of strings. Each entry is one key contribution or main claim.
 

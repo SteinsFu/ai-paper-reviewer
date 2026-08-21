@@ -4,3 +4,8 @@ pypdf
 python-dotenv
 requests
 pytest
+fastapi
+uvicorn[standard]
+python-multipart
+sse-starlette
+httpx
