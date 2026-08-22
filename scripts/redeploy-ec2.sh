@@ -44,6 +44,8 @@ docker run -d --name margin --restart unless-stopped -p 127.0.0.1:8000:8000 \
   -e AWS_REGION=ap-southeast-2 \
   -e AWS_BEARER_TOKEN_BEDROCK="$AWS_BEARER_TOKEN_BEDROCK" \
   margin
+echo ""
+echo ">>> Backend image built! Please run \`docker image prune -f\` to remove unused images."
 
 # Check the status (uvicorn needs a few seconds after docker run)
 echo ""
