@@ -19,6 +19,7 @@ cd ~/ai-paper-reviewer
 git pull
 
 # Build the frontend image
+echo ""
 echo "================================================"
 echo "Building frontend image..."
 echo "================================================"
@@ -29,6 +30,7 @@ sudo cp -r dist/* /var/www/margin/
 sudo nginx -s reload
 
 # Build the backend image
+echo ""
 echo "================================================"
 echo "Building backend image..."
 echo "================================================"
@@ -43,14 +45,19 @@ docker run -d --name margin --restart unless-stopped -p 127.0.0.1:8000:8000 \
   -e AWS_BEARER_TOKEN_BEDROCK="$AWS_BEARER_TOKEN_BEDROCK" \
   margin
 
-# Check the status
+# Check the status (uvicorn needs a few seconds after docker run)
+echo ""
 echo "================================================"
 echo "Checking status..."
 echo "================================================"
-code="$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/docs || true)"
-if [ "$code" = "200" ]; then
-  echo "status 200 Success!"
-else
-  echo "status $code failed. docker logs margin" >&2
-  exit 1
-fi
+code=""
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+  code="$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/docs || true)"
+  if [ "$code" = "200" ]; then
+    echo "status 200 Success!"
+    exit 0
+  fi
+  sleep 2
+done
+echo "status $code failed. docker logs margin" >&2
+exit 1
