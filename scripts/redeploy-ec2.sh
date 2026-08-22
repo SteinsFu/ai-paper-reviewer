@@ -12,12 +12,16 @@ if [ -z "${AWS_BEARER_TOKEN_BEDROCK:-}" ]; then
 fi
 
 # Pull the latest code
+echo "================================================"
 echo "Pulling latest code..."
+echo "================================================"
 cd ~/ai-paper-reviewer
 git pull
 
 # Build the frontend image
+echo "================================================"
 echo "Building frontend image..."
+echo "================================================"
 cd ~/ai-paper-reviewer/margin/app
 npm install
 VITE_API_MODE=http VITE_API_BASE_URL= npm run build
@@ -25,7 +29,9 @@ sudo cp -r dist/* /var/www/margin/
 sudo nginx -s reload
 
 # Build the backend image
+echo "================================================"
 echo "Building backend image..."
+echo "================================================"
 cd ~/ai-paper-reviewer
 mkdir -p ~/margin-data
 docker build -t margin .
@@ -38,7 +44,9 @@ docker run -d --name margin --restart unless-stopped -p 127.0.0.1:8000:8000 \
   margin
 
 # Check the status
+echo "================================================"
 echo "Checking status..."
+echo "================================================"
 code="$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/docs || true)"
 if [ "$code" = "200" ]; then
   echo "status 200 Success!"
