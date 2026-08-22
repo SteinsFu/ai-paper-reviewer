@@ -206,8 +206,11 @@ API image and container (repo root). Paste the Bedrock key; do not copy
 
 ```bash
 cd ~/ai-paper-reviewer
+mkdir -p ~/margin-data
 docker build -t margin .
 docker run -d --name margin --restart unless-stopped -p 127.0.0.1:8000:8000 \
+  -v ~/margin-data:/data \
+  -e MARGIN_DB_PATH=/data/margin.db \
   -e AWS_REGION=ap-southeast-2 \
   -e AWS_BEARER_TOKEN_BEDROCK='PASTE_YOUR_ABSK_KEY_HERE' \
   margin
@@ -277,8 +280,8 @@ Browser: `http://EIP` (app), `http://EIP/docs` (Swagger).
 | Bedrock / expired token | `docker logs margin`; new long-term key; `docker rm -f margin` and `docker run` again |
 | CORS errors | Should not happen on this setup; you are same-origin |
 
-Reviews live in memory on **this** container. Redeploy or reboot
-without `--restart unless-stopped` clears the library.
+Reviews live in SQLite at `~/margin-data/margin.db` (the `-v ~/margin-data:/data`
+mount). Rebuilds keep the library. Omit the mount and a new container starts empty.
 
 ---
 
@@ -301,9 +304,12 @@ sudo nginx -s reload
 ```bash
 cd ~/ai-paper-reviewer
 git pull
+mkdir -p ~/margin-data
 docker build -t margin .
 docker rm -f margin
 docker run -d --name margin --restart unless-stopped -p 127.0.0.1:8000:8000 \
+  -v ~/margin-data:/data \
+  -e MARGIN_DB_PATH=/data/margin.db \
   -e AWS_REGION=ap-southeast-2 \
   -e AWS_BEARER_TOKEN_BEDROCK='PASTE_YOUR_ABSK_KEY_HERE' \
   margin

@@ -3,8 +3,8 @@
 Runs the AWS Bedrock review pipeline behind a small HTTP surface that mirrors
 Matteo's ``MarginApi`` (see ``margin/app/src/services/api.ts``). The heavy
 work lives in ``bundle_builder.build_bundle``; this module wires it into
-endpoints with an SSE progress stream on ``POST /analyze`` and an in-memory
-store keyed by a deterministic paper id.
+endpoints with an SSE progress stream on ``POST /analyze``. Library and
+bundles persist in SQLite (``store.py``, path from ``MARGIN_DB_PATH``).
 
 Run locally:
 
@@ -16,10 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import time
 import uuid
-from datetime import datetime, timezone
-from threading import Lock
 from typing import Any, Iterable
 
 from dotenv import load_dotenv
@@ -30,6 +27,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import bundle_builder as bb
+import store
 from bedrock_client import HAIKU_4_5
 from novelty_review.src.novelty_review import _parse_manuscript
 from pdf_utils import extract_text
@@ -49,44 +47,13 @@ app.add_middleware(
 )
 
 
-# ---------------------------------------------------------------------------
-# In-memory store
-# ---------------------------------------------------------------------------
-
-_store_lock = Lock()
-_bundles: dict[str, dict[str, Any]] = {}
-_library: dict[str, dict[str, Any]] = {}
-
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-
 def _library_snapshot() -> list[dict[str, Any]]:
-    with _store_lock:
-        return sorted(_library.values(), key=lambda p: p.get("updatedAt", 0), reverse=True)
+    return store.list_papers()
 
 
 def _register_bundle(paper_id: str, bundle: dict[str, Any]) -> dict[str, Any]:
     """Add or replace a bundle and its library-list entry. Returns the entry."""
-    paper = bundle.get("paper", {})
-    open_issues = sum(1 for a in bundle.get("annotations", []) if a.get("sev") != "minor")
-    entry = {
-        "id": paper_id,
-        "title": paper.get("title") or "Untitled",
-        "authors": paper.get("authors") or "",
-        "venue": paper.get("venue") or "",
-        "status": "in-review",
-        "score": paper.get("overall"),
-        "issues": open_issues,
-        "updated": _now_iso(),
-        "updatedAt": int(time.time() * 1000),
-        "current": True,
-    }
-    with _store_lock:
-        _bundles[paper_id] = bundle
-        _library[paper_id] = entry
-    return entry
+    return store.upsert_bundle(paper_id, bundle)
 
 
 # ---------------------------------------------------------------------------
@@ -229,8 +196,7 @@ def library() -> list[dict[str, Any]]:
 
 @app.get("/paper/{paper_id}")
 def get_paper(paper_id: str) -> dict[str, Any]:
-    with _store_lock:
-        bundle = _bundles.get(paper_id)
+    bundle = store.get_bundle(paper_id)
     if bundle is None:
         raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
     return bundle
@@ -238,8 +204,7 @@ def get_paper(paper_id: str) -> dict[str, Any]:
 
 @app.get("/paper/{paper_id}/report")
 def get_report(paper_id: str) -> dict[str, Any]:
-    with _store_lock:
-        bundle = _bundles.get(paper_id)
+    bundle = store.get_bundle(paper_id)
     if bundle is None:
         raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
     return bundle.get("report") or {}
@@ -247,17 +212,14 @@ def get_report(paper_id: str) -> dict[str, Any]:
 
 @app.get("/paper/{paper_id}/venues")
 def get_venues(paper_id: str) -> list[dict[str, Any]]:
-    with _store_lock:
-        if paper_id not in _bundles:
-            raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
+    if not store.paper_exists(paper_id):
+        raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
     return []  # deferred to Phase 2
 
 
 @app.delete("/paper/{paper_id}")
 def delete_paper(paper_id: str) -> list[dict[str, Any]]:
-    with _store_lock:
-        _bundles.pop(paper_id, None)
-        _library.pop(paper_id, None)
+    store.delete_paper(paper_id)
     return _library_snapshot()
 
 
@@ -267,12 +229,8 @@ class ArchivePatch(BaseModel):
 
 @app.patch("/paper/{paper_id}")
 def patch_paper(paper_id: str, patch: ArchivePatch) -> list[dict[str, Any]]:
-    with _store_lock:
-        entry = _library.get(paper_id)
-        if entry is None:
-            raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
-        entry["archived"] = patch.archived
-        entry["status"] = "done" if patch.archived else "in-review"
+    if not store.set_archived(paper_id, patch.archived):
+        raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
     return _library_snapshot()
 
 
@@ -281,10 +239,8 @@ def patch_paper(paper_id: str, patch: ArchivePatch) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
-def _reset_store_for_tests() -> None:
-    with _store_lock:
-        _bundles.clear()
-        _library.clear()
+def _reset_store_for_tests(db_path: str | None = None) -> None:
+    store.configure(db_path)
 
 
 def _seed_bundle_for_tests(paper_id: str, bundle: dict[str, Any]) -> None:

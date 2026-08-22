@@ -84,6 +84,25 @@ def test_converse_json_raises_when_no_tool_use_block():
         )
 
 
+def test_get_client_skips_login_provider_when_bearer_token_set(monkeypatch):
+    monkeypatch.setenv("AWS_BEARER_TOKEN_BEDROCK", "ABSKTEST")
+    monkeypatch.setenv("AWS_REGION", "ap-southeast-2")
+    captured: dict = {}
+
+    def fake_client(service_name, **kwargs):
+        captured["service_name"] = service_name
+        captured["kwargs"] = kwargs
+        return MagicMock()
+
+    monkeypatch.setattr(bedrock_client.boto3, "client", fake_client)
+    bedrock_client.get_client()
+
+    assert captured["service_name"] == "bedrock-runtime"
+    assert captured["kwargs"]["region_name"] == "ap-southeast-2"
+    assert captured["kwargs"]["aws_access_key_id"] == "bedrock-api-key"
+    assert captured["kwargs"]["aws_secret_access_key"] == "bedrock-api-key"
+
+
 def test_haiku_and_sonnet_ids_are_ap_southeast_inference_profiles():
     assert bedrock_client.HAIKU_4_5.startswith("au.anthropic.claude-haiku-4-5-")
     assert bedrock_client.SONNET_4_5.startswith("au.anthropic.claude-sonnet-4-5-")

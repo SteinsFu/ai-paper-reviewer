@@ -7,6 +7,7 @@ the ``bundle_builder`` helpers so no live Bedrock traffic is generated.
 from __future__ import annotations
 
 import json
+import os
 from io import BytesIO
 
 import pytest
@@ -14,13 +15,16 @@ from fastapi.testclient import TestClient
 
 import bundle_builder as bb
 import server
+import store
 
 
 @pytest.fixture(autouse=True)
-def _reset_store():
-    server._reset_store_for_tests()
+def _reset_store(tmp_path, monkeypatch):
+    db = str(tmp_path / "margin.db")
+    monkeypatch.setenv("MARGIN_DB_PATH", db)
+    server._reset_store_for_tests(db)
     yield
-    server._reset_store_for_tests()
+    store.close()
 
 
 @pytest.fixture
@@ -226,6 +230,16 @@ def test_patch_paper_toggles_archived(client):
 
 def test_patch_paper_404_for_unknown(client):
     assert client.patch("/paper/nope", json={"archived": True}).status_code == 404
+
+
+def test_library_survives_db_reconnect(client):
+    server._seed_bundle_for_tests("p_test", _fake_bundle("p_test", "Persisted"))
+    path = os.environ["MARGIN_DB_PATH"]
+    store.configure(path)
+    lib = client.get("/library").json()
+    assert len(lib) == 1
+    assert lib[0]["title"] == "Persisted"
+    assert client.get("/paper/p_test").json()["paper"]["title"] == "Persisted"
 
 
 # ---------------------------------------------------------------------------
