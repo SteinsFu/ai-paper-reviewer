@@ -10,8 +10,8 @@ import { CATEGORIES } from "../data/mock";
 
 export function Visual() {
   const { bundle, paperId } = usePaperBundle();
-  const { visuals } = bundle;
-  const [active, setActive] = useState(visuals[0].id);
+  const visuals = bundle.visuals ?? [];
+  const [active, setActive] = useState(visuals[0]?.id);
   const navigate = useNavigate();
   const item = visuals.find((v) => v.id === active) ?? visuals[0];
 
@@ -26,6 +26,17 @@ export function Visual() {
           </p>
         </header>
 
+        {!item ? (
+          <div className="card" style={{ textAlign:"center", padding:"54px 20px", color:"var(--text-3)" }}>
+            <Icon name="grid" size={28} style={{ marginBottom:10, opacity:0.5 }}/>
+            <div style={{ fontSize:14.5, fontWeight:600, color:"var(--text-2)", marginBottom:4 }}>
+              No visual notes yet
+            </div>
+            <div style={{ fontSize:13 }}>
+              This review didn't flag figures or dense passages for a before/after rewrite.
+            </div>
+          </div>
+        ) : (
         <div style={{ display:"flex", gap:24, alignItems:"flex-start" }}>
           {/* list */}
           <div style={{ width:268, flex:"0 0 268px", display:"flex", flexDirection:"column", gap:9 }}>
@@ -109,6 +120,7 @@ export function Visual() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

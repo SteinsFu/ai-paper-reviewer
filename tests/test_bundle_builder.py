@@ -342,3 +342,64 @@ def test_build_bundle_clamps_bad_recommendation(monkeypatch):
 
     bundle = bb.build_bundle("some text")
     assert bundle["paper"]["recommendation"] == "major"  # fallback to "major"
+
+
+def test_normalize_report_parses_item_tagged_string():
+    """Bedrock sometimes returns strengths as an <item> blob, not string[]."""
+    raw = {
+        "summary": "A conceptual essay.",
+        "strengths": (
+            "\n<item>Clear exposition of information geometry fundamentals.</item>"
+            "\n<item>Well-motivated geometric analogy.</item>"
+        ),
+    }
+    out = bb.normalize_report(raw)
+    assert out["strengths"] == [
+        "Clear exposition of information geometry fundamentals.",
+        "Well-motivated geometric analogy.",
+    ]
+    assert out["weaknesses"] == []
+    assert out["minor"] == []
+    assert out["recommendation"] == "major"
+    assert out["confidence"] == 3
+    assert out["summary"] == "A conceptual essay."
+
+
+def test_normalize_report_passthrough_lists():
+    raw = {
+        "summary": "S",
+        "strengths": ["a"],
+        "weaknesses": ["b"],
+        "minor": ["c"],
+        "recommendation": "accept",
+        "confidence": 5,
+    }
+    assert bb.normalize_report(raw) == raw
+
+
+def test_build_bundle_coerces_string_report_lists(monkeypatch):
+    monkeypatch.setattr(
+        bb, "_parse_manuscript",
+        lambda text, model, client: {"title": "T", "abstract": "A", "claims": [], "references_raw": ""},
+    )
+    monkeypatch.setattr(
+        bb, "structured_report",
+        lambda text, model, client: {
+            "summary": "S",
+            "strengths": "<item>One plus.</item><item>Two plus.</item>",
+            "recommendation": "minor",
+            "confidence": 4,
+        },
+    )
+    monkeypatch.setattr(bb, "score_categories", lambda t, m, c: {c: 50 for c in bb.CATEGORY_IDS})
+    monkeypatch.setattr(
+        bb, "assess_novelty",
+        lambda m, mo, c: {"score": 50, "verdict": "", "summary": "", "strengths": [], "risks": []},
+    )
+    monkeypatch.setattr(bb, "generate_annotations", lambda t, m, c: [])
+
+    bundle = bb.build_bundle("some text")
+    assert bundle["report"]["strengths"] == ["One plus.", "Two plus."]
+    assert bundle["report"]["weaknesses"] == []
+    assert bundle["report"]["minor"] == []
+    assert bundle["report"]["recommendation"] == "minor"

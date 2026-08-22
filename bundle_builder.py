@@ -372,6 +372,105 @@ def overall_score(scores: dict[str, int]) -> int:
     return int(round(sum(values) / len(values)))
 
 
+_ITEM_TAG_RE = re.compile(r"<item>(.*?)</item>", re.DOTALL | re.IGNORECASE)
+
+
+def as_str_list(value: Any) -> list[str]:
+    """Coerce LLM-shaped list fields to ``list[str]``.
+
+    Bedrock tool-use sometimes returns a single ``<item>…</item>`` blob, a
+    newline-bulleted string, a dict, or omits the field. The UI calls
+    ``.map`` on these, so a non-list crashes the Report page.
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        out: list[str] = []
+        for item in value:
+            if isinstance(item, str):
+                text = item.strip()
+            elif isinstance(item, dict):
+                text = str(item.get("text") or item.get("item") or "").strip()
+            else:
+                text = str(item).strip()
+            if text:
+                out.append(text)
+        return out
+    if isinstance(value, str):
+        tagged = [re.sub(r"\s+", " ", chunk).strip() for chunk in _ITEM_TAG_RE.findall(value)]
+        tagged = [chunk for chunk in tagged if chunk]
+        if tagged:
+            return tagged
+        lines: list[str] = []
+        for raw in value.splitlines():
+            line = re.sub(r"^[-*•]+\s*", "", raw).strip()
+            if line:
+                lines.append(line)
+        if len(lines) > 1:
+            return lines
+        text = value.strip()
+        return [text] if text else []
+    if isinstance(value, dict):
+        return as_str_list(list(value.values()))
+    text = str(value).strip()
+    return [text] if text else []
+
+
+def normalize_report(report: Any) -> dict[str, Any]:
+    """Force a ReviewReport-shaped dict, filling fields Bedrock omitted."""
+    if not isinstance(report, dict):
+        report = {}
+    rec = report.get("recommendation") if report.get("recommendation") in RECOMMENDATIONS else "major"
+    try:
+        conf = int(report.get("confidence", 3))
+    except (TypeError, ValueError):
+        conf = 3
+    conf = max(1, min(5, conf))
+    summary = report.get("summary")
+    if not isinstance(summary, str):
+        summary = "" if summary is None else str(summary)
+    return {
+        "summary": summary,
+        "strengths": as_str_list(report.get("strengths")),
+        "weaknesses": as_str_list(report.get("weaknesses")),
+        "minor": as_str_list(report.get("minor")),
+        "recommendation": rec,
+        "confidence": conf,
+    }
+
+
+def normalize_novelty(novelty: Any) -> dict[str, Any]:
+    if not isinstance(novelty, dict):
+        novelty = {}
+    try:
+        score = int(novelty.get("score", 0))
+    except (TypeError, ValueError):
+        score = 0
+    score = max(0, min(100, score))
+    verdict = novelty.get("verdict")
+    summary = novelty.get("summary")
+    return {
+        "score": score,
+        "verdict": verdict if isinstance(verdict, str) else "",
+        "summary": summary if isinstance(summary, str) else ("" if summary is None else str(summary)),
+        "strengths": as_str_list(novelty.get("strengths")),
+        "risks": as_str_list(novelty.get("risks")),
+    }
+
+
+def normalize_bundle(bundle: Any) -> dict[str, Any]:
+    """Clamp list/report fields so stored Bedrock output matches the TS contract."""
+    if not isinstance(bundle, dict):
+        bundle = {}
+    out = dict(bundle)
+    out["report"] = normalize_report(out.get("report"))
+    out["novelty"] = normalize_novelty(out.get("novelty"))
+    for key in ("visuals", "related", "missingRefs", "annotations", "manuscript", "references"):
+        val = out.get(key)
+        out[key] = val if isinstance(val, list) else []
+    return out
+
+
 def stable_paper_id(paper_text: str) -> str:
     """A short deterministic id from the first 4KB of the paper text. Two
     uploads of the same file produce the same id, letting the server dedupe."""
@@ -403,17 +502,15 @@ def build_bundle(
     meta = _parse_manuscript(paper_text, model, client)
     references_raw = meta.get("references_raw") or _extract_references_section(paper_text)
 
-    report = structured_report(paper_text, model, client)
+    report = normalize_report(structured_report(paper_text, model, client))
     scores = score_categories(paper_text, model, client)
-    novelty = assess_novelty(meta, model, client)
+    novelty = normalize_novelty(assess_novelty(meta, model, client))
     raw_annotations = generate_annotations(paper_text, model, client)
-    annotations = enrich_annotations(raw_annotations)
+    annotations = enrich_annotations(raw_annotations if isinstance(raw_annotations, list) else [])
 
     references = split_references(references_raw)
     missing_refs = derive_missing_refs(annotations)
     manuscript = build_manuscript_blocks(paper_text)
-
-    recommendation = report.get("recommendation") if report.get("recommendation") in RECOMMENDATIONS else "major"
 
     paper = {
         "title": meta.get("title") or "Untitled",
@@ -424,10 +521,10 @@ def build_bundle(
         "figures": count_figures(paper_text),
         "refs": len(references),
         "overall": overall_score(scores),
-        "recommendation": recommendation,
+        "recommendation": report["recommendation"],
     }
 
-    return {
+    return normalize_bundle({
         "paper": paper,
         "scores": {cat: int(scores.get(cat, 0)) for cat in CATEGORY_IDS},
         "manuscript": manuscript,
@@ -438,4 +535,4 @@ def build_bundle(
         "novelty": novelty,
         "report": report,
         "references": references,
-    }
+    })

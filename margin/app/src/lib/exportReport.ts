@@ -3,6 +3,7 @@
    ============================================================ */
 import type { Annotation, ReviewBundle } from "../services/types";
 import { RECS } from "../data/mock";
+import { asStringList } from "./asStringList";
 
 export function buildMarkdown(bundle: ReviewBundle, overrides?: {
   recommendation?: keyof typeof RECS; confidence?: number; summary?: string;
@@ -13,7 +14,7 @@ export function buildMarkdown(bundle: ReviewBundle, overrides?: {
   const conf = overrides?.confidence ?? report.confidence;
   const summary = overrides?.summary ?? report.summary;
   const userNotes = overrides?.userNotes ?? [];
-  const bullets = (items: string[]) => items.map((i) => `- ${i}`).join("\n");
+  const bullets = (items: unknown) => asStringList(items).map((i) => `- ${i}`).join("\n");
   const notesSection = userNotes.length
     ? `
 
