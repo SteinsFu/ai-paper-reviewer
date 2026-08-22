@@ -36,7 +36,8 @@ function greeting(): string {
 
 export function Dashboard() {
   const { data: lib, loading, error, reload, remove, setArchived } = useLibrary();
-  const { currentPaperId, setCurrentPaper } = useAppState();
+  const { currentPaperId, setCurrentPaper, account } = useAppState();
+  const who = account?.name?.trim() || account?.email.split("@")[0] || "there";
   const [params, setParams] = useSearchParams();
   const filter = paramToFilter(params.get("view"));
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -114,7 +115,7 @@ export function Dashboard() {
         <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", marginBottom:26, gap:20 }}>
           <div>
             <h1 style={{ fontSize:32, fontWeight:700, letterSpacing:"-0.03em", margin:"0 0 5px" }}>
-              {greeting()}, Dr. Lin
+              {greeting()}, {who}
             </h1>
             <p style={{ fontSize:15.5, color:"var(--text-2)", margin:0 }}>
               You have {inReview} {inReview === 1 ? "paper" : "papers"} in progress and {totalIssues} open issues across your workspace.
