@@ -21,7 +21,7 @@ git pull
 # Build the frontend image
 echo ""
 echo "================================================"
-echo "Building frontend image..."
+echo "Building frontend and copying to /var/www/margin..."
 echo "================================================"
 cd ~/ai-paper-reviewer/margin/app
 npm install
