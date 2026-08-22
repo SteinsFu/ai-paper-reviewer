@@ -7,8 +7,10 @@
 import type { MarginApi } from "./api";
 import { mockApi } from "./mockApi";
 import { httpApi } from "./httpApi";
+import { libraryStore } from "./libraryStore";
 
 const mode = import.meta.env.VITE_API_MODE ?? "mock";
+if (mode !== "http") libraryStore.seedFromMock();
 
 export const api: MarginApi = mode === "http" ? httpApi : mockApi;
 export { copilot } from "./copilot";

@@ -30,6 +30,10 @@ export function loadAllReviews(): Promise<Record<string, ReviewBundle>> {
   if (!cache) cache = api.getAllReviews().catch((e) => { cache = null; throw e; });
   return cache;
 }
+/** drop the memo so a newly analyzed paper shows up in search / analytics */
+export function invalidateReviewCache() {
+  cache = null;
+}
 
 /** Live cross-paper note entries. Fetches bundles on first `open`, then merges
     in the reviewer's own notes from the store on every change. */

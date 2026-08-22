@@ -4,6 +4,9 @@ import { motion } from "motion/react";
 import { Icon } from "../components/Icon";
 import { Analyzing } from "./Analyzing";
 import { useLibrary } from "../hooks/useReview";
+import { api } from "../services";
+import { libraryStore } from "../services/libraryStore";
+import { invalidateReviewCache } from "../services/searchIndex";
 import { CATEGORIES, CAT_ORDER } from "../data/mock";
 
 export function Upload() {
@@ -17,7 +20,9 @@ export function Upload() {
 
   function startAnalyzeWith(picked: File | null) { setFile(picked); setAnalyzing(true); }
   function openPicker() { fileInputRef.current?.click(); }
-  function finishAnalyze(paperId: string) {
+  async function finishAnalyze(paperId: string) {
+    invalidateReviewCache();
+    try { libraryStore.replace(await api.getLibrary()); } catch { /* sidebar refetches on next visit */ }
     navigate(`/paper/${paperId}/reader`);
   }
 

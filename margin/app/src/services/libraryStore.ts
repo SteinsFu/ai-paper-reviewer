@@ -38,8 +38,9 @@ let state = load();
 const listeners = new Set<() => void>();
 
 /** cached derived list — stable reference until a mutation recomputes it
-    (useSyncExternalStore requires getSnapshot to be referentially stable) */
-let snapshot: LibraryPaper[] = derive();
+    (useSyncExternalStore requires getSnapshot to be referentially stable).
+    Starts empty; mock mode seeds via seedFromMock(), HTTP mode fills via replace(). */
+let snapshot: LibraryPaper[] = [];
 
 function derive(): LibraryPaper[] {
   return LIBRARY
@@ -60,6 +61,15 @@ export const libraryStore = {
   },
   getSnapshot(): LibraryPaper[] {
     return snapshot;
+  },
+  /** swap the live list (HTTP fetch / mutation response) */
+  replace(list: LibraryPaper[]) {
+    snapshot = list;
+    listeners.forEach((l) => l());
+  },
+  /** demo seed + localStorage patches — mock API only */
+  seedFromMock() {
+    snapshot = derive();
   },
   remove(id: string) {
     if (!state.deleted.includes(id)) state.deleted = [...state.deleted, id];
