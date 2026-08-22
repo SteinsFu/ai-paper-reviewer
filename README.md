@@ -131,31 +131,21 @@ The **Dashboard** lists every paper you have reviewed so far.
 
 ## Redeploy on EC2
 
-First-time setup (key pair, security group, nginx, first container) is in
-[`docs/deploy-ec2.md`](docs/deploy-ec2.md). After that, updates go through
-`scripts/redeploy-ec2.sh` **on the instance**. It pulls the repo, rebuilds
-the SPA into `/var/www/margin`, rebuilds the API image, and restarts the
-`margin` container with the SQLite volume at `~/margin-data` (reviews
-survive the restart). No RDS or other AWS database is required.
-
-SSH in, then:
+First-time setup is in [`docs/deploy-ec2.md`](docs/deploy-ec2.md). Confirm the
+app locally first (`VITE_API_MODE=http`, upload a paper, restart uvicorn,
+paper still on the Dashboard, `data/margin.db` exists). Then SSH in and
+redeploy:
 
 ```bash
 cd ~/ai-paper-reviewer
 git pull
-bash scripts/redeploy-ec2.sh
-```
-
-The script reuses `AWS_BEARER_TOKEN_BEDROCK` from the running container.
-To replace a wrong or expired key instead:
-
-```bash
 AWS_BEARER_TOKEN_BEDROCK='ABSK...' bash scripts/redeploy-ec2.sh
 ```
 
-It finishes when `http://127.0.0.1:8000/docs` returns `200`. If it
-fails, run `docker logs margin`. Optional: `AWS_REGION` (default
-`ap-southeast-2`).
+The script pulls, rebuilds the SPA into `/var/www/margin`, recreates the
+`margin` container with `~/margin-data` mounted, and curls
+`http://127.0.0.1:8000/docs` (want `200`). Omit `-v` in a manual
+`docker run` and a new container starts empty. No RDS.
 
 ---
 
