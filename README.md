@@ -129,6 +129,26 @@ The **Dashboard** lists every paper you have reviewed so far.
 
 ---
 
+## Redeploy on EC2
+
+First-time setup is in [`docs/deploy-ec2.md`](docs/deploy-ec2.md). Confirm the
+app locally first (`VITE_API_MODE=http`, upload a paper, restart uvicorn,
+paper still on the Dashboard, `data/margin.db` exists). Then SSH in and
+redeploy:
+
+```bash
+cd ~/ai-paper-reviewer
+git pull
+AWS_BEARER_TOKEN_BEDROCK='ABSK...' bash scripts/redeploy-ec2.sh
+```
+
+The script pulls, rebuilds the SPA into `/var/www/margin`, recreates the
+`margin` container with `~/margin-data` mounted, and curls
+`http://127.0.0.1:8000/docs` (want `200`). Omit `-v` in a manual
+`docker run` and a new container starts empty. No RDS.
+
+---
+
 ## Alternative: the Streamlit prototype
 
 For a minimal single-page UI (no React setup needed):
@@ -181,4 +201,6 @@ reach it.
 - `pdf_utils.py` — PDF / text extraction
 - `app.py` — Streamlit prototype UI
 - `margin/app/` — Matteo's React SPA (Vite + React 19 + TypeScript)
+- `scripts/redeploy-ec2.sh` — pull, rebuild SPA + API, restart Docker on EC2
+- `docs/deploy-ec2.md` — first-time EC2 install
 - `tests/` — Python unit tests (`pytest -q`)

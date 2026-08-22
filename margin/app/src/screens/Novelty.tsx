@@ -5,6 +5,7 @@ import type { IconName } from "../components/Icon";
 import { ScoreRing } from "../components/ScoreRing";
 import { Segmented } from "../components/Segmented";
 import { usePaperBundle } from "./PaperLayout";
+import { asStringList } from "../lib/asStringList";
 
 type Tab = "novelty" | "related" | "refs";
 
@@ -59,8 +60,8 @@ export function Novelty() {
                 <p style={{ fontSize:14.5, color:"var(--text-2)", lineHeight:1.6, margin:0 }}>{novelty.summary}</p>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
-                <ListCard title="Genuinely novel" ic="checkCircle" color="var(--ok)" items={novelty.strengths}/>
-                <ListCard title="Novelty risks" ic="alert" color="var(--critical)" items={novelty.risks}/>
+                <ListCard title="Genuinely novel" ic="checkCircle" color="var(--ok)" items={asStringList(novelty.strengths)}/>
+                <ListCard title="Novelty risks" ic="alert" color="var(--critical)" items={asStringList(novelty.risks)}/>
               </div>
             </div>
           </div>

@@ -5,6 +5,7 @@ import { Icon } from "../components/Icon";
 import { usePaperBundle } from "./PaperLayout";
 import { useReviewState } from "../hooks/useReview";
 import { RECS } from "../data/mock";
+import { asStringList } from "../lib/asStringList";
 import { buildMarkdown, downloadMarkdown, printReport } from "../lib/exportReport";
 import type { Recommendation } from "../services/types";
 
@@ -14,9 +15,9 @@ export function Report() {
   const { reportEdits, userNotes, setReportEdits } = useReviewState(paperId);
   const noteCount = annotations.length + userNotes.length;
   // report fields are the AI draft overlaid with any persisted human edits
-  const rec = reportEdits?.recommendation ?? report.recommendation;
-  const conf = reportEdits?.confidence ?? report.confidence;
-  const summary = reportEdits?.summary ?? report.summary;
+  const rec = reportEdits?.recommendation ?? report.recommendation ?? "major";
+  const conf = reportEdits?.confidence ?? report.confidence ?? 3;
+  const summary = reportEdits?.summary ?? report.summary ?? "";
   const setRec = (r: Recommendation) => setReportEdits({ recommendation: r });
   const setConf = (c: number) => setReportEdits({ confidence: c });
   const setSummary = (s: string) => setReportEdits({ summary: s });
@@ -133,9 +134,9 @@ export function Report() {
 
         {/* Report body */}
         <ReportSection num="1" title="Summary" body={summary} onBodyChange={setSummary}/>
-        <ReportSection num="2" title="Strengths" items={report.strengths} tone="ok"/>
-        <ReportSection num="3" title="Weaknesses" items={report.weaknesses} tone="bad"/>
-        <ReportSection num="4" title="Minor comments" items={report.minor} tone="minor"/>
+        <ReportSection num="2" title="Strengths" items={asStringList(report.strengths)} tone="ok"/>
+        <ReportSection num="3" title="Weaknesses" items={asStringList(report.weaknesses)} tone="bad"/>
+        <ReportSection num="4" title="Minor comments" items={asStringList(report.minor)} tone="minor"/>
 
         <div className="no-print" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:20,
           padding:"16px 20px", background:"var(--surface-2)", borderRadius:14, border:"1px solid var(--line-2)" }}>
@@ -174,7 +175,7 @@ function ExportItem({ ic, label, sub, onClick }: {
   );
 }
 
-function ReportSection({ num, title, body, items, tone, onBodyChange }: {
+function ReportSection({ num, title, body, items = [], tone, onBodyChange }: {
   num: string; title: string; body?: string; items?: string[];
   tone?: "ok" | "bad" | "minor"; onBodyChange?: (s: string) => void;
 }) {
@@ -207,7 +208,7 @@ function ReportSection({ num, title, body, items, tone, onBodyChange }: {
             background:"transparent", letterSpacing:"-0.01em" }}/>
       ) : (
         <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
-          {items?.map((it, i) => (
+          {items.map((it, i) => (
             <div key={i} style={{ display:"flex", gap:11, alignItems:"flex-start" }}>
               <span style={{ width:6, height:6, borderRadius:99, background:dot, flex:"0 0 auto", marginTop:8 }}/>
               <span style={{ fontSize:14.5, color:"var(--text-2)", lineHeight:1.55, flex:1 }}>{it}</span>

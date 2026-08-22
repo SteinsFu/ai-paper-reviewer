@@ -196,6 +196,31 @@ def test_get_report_returns_review_report(client):
     assert report["confidence"] == 4
 
 
+def test_get_paper_coerces_item_tagged_strengths_string(client):
+    """Stored reviews from Bedrock may have report.strengths as an <item> string."""
+    bundle = _fake_bundle("p_live")
+    bundle["report"] = {
+        "summary": "Conceptual essay.",
+        "strengths": (
+            "<item>Clear exposition of fundamentals.</item>"
+            "<item>Well-motivated analogy.</item>"
+        ),
+    }
+    server._seed_bundle_for_tests("p_live", bundle)
+
+    body = client.get("/paper/p_live").json()
+    assert body["report"]["strengths"] == [
+        "Clear exposition of fundamentals.",
+        "Well-motivated analogy.",
+    ]
+    assert body["report"]["weaknesses"] == []
+    assert body["report"]["recommendation"] == "major"
+    assert isinstance(body["report"]["minor"], list)
+
+    report = client.get("/paper/p_live/report").json()
+    assert report["strengths"] == body["report"]["strengths"]
+
+
 def test_get_venues_returns_empty_for_valid_paper(client):
     server._seed_bundle_for_tests("p_test", _fake_bundle("p_test"))
     assert client.get("/paper/p_test/venues").json() == []

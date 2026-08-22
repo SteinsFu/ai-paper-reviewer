@@ -122,11 +122,12 @@ async def _run_pipeline(paper_text: str, pdf_bytes: bytes | None, model: str, ve
 
         # Step 6: assembly (pure Python — no LLM).
         yield _sse(_progress_payload(5))
-        annotations = bb.enrich_annotations(raw_annotations)
+        report = bb.normalize_report(report)
+        novelty = bb.normalize_novelty(novelty)
+        annotations = bb.enrich_annotations(raw_annotations if isinstance(raw_annotations, list) else [])
         references = bb.split_references(meta.get("references_raw") or "")
         missing_refs = bb.derive_missing_refs(annotations)
         manuscript = bb.build_manuscript_blocks(paper_text)
-        recommendation = report.get("recommendation") if report.get("recommendation") in bb.RECOMMENDATIONS else "major"
         paper = {
             "title": meta.get("title") or "Untitled",
             "authors": meta.get("authors") or "",
@@ -136,9 +137,9 @@ async def _run_pipeline(paper_text: str, pdf_bytes: bytes | None, model: str, ve
             "figures": bb.count_figures(paper_text),
             "refs": len(references),
             "overall": bb.overall_score(scores),
-            "recommendation": recommendation,
+            "recommendation": report["recommendation"],
         }
-        bundle = {
+        bundle = bb.normalize_bundle({
             "paper": paper,
             "scores": {c: int(scores.get(c, 0)) for c in bb.CATEGORY_IDS},
             "manuscript": manuscript,
@@ -149,7 +150,7 @@ async def _run_pipeline(paper_text: str, pdf_bytes: bytes | None, model: str, ve
             "novelty": novelty,
             "report": report,
             "references": references,
-        }
+        })
         paper_id = bb.stable_paper_id(paper_text)
         _register_bundle(paper_id, bundle)
 
@@ -199,7 +200,7 @@ def get_paper(paper_id: str) -> dict[str, Any]:
     bundle = store.get_bundle(paper_id)
     if bundle is None:
         raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
-    return bundle
+    return bb.normalize_bundle(bundle)
 
 
 @app.get("/paper/{paper_id}/report")
@@ -207,7 +208,7 @@ def get_report(paper_id: str) -> dict[str, Any]:
     bundle = store.get_bundle(paper_id)
     if bundle is None:
         raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
-    return bundle.get("report") or {}
+    return bb.normalize_report(bundle.get("report") or {})
 
 
 @app.get("/paper/{paper_id}/venues")
