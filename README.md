@@ -129,6 +129,36 @@ The **Dashboard** lists every paper you have reviewed so far.
 
 ---
 
+## Redeploy on EC2
+
+First-time setup (key pair, security group, nginx, first container) is in
+[`docs/deploy-ec2.md`](docs/deploy-ec2.md). After that, updates go through
+`scripts/redeploy-ec2.sh` **on the instance**. It pulls the repo, rebuilds
+the SPA into `/var/www/margin`, rebuilds the API image, and restarts the
+`margin` container with the SQLite volume at `~/margin-data` (reviews
+survive the restart). No RDS or other AWS database is required.
+
+SSH in, then:
+
+```bash
+cd ~/ai-paper-reviewer
+git pull
+bash scripts/redeploy-ec2.sh
+```
+
+The script reuses `AWS_BEARER_TOKEN_BEDROCK` from the running container.
+To replace a wrong or expired key instead:
+
+```bash
+AWS_BEARER_TOKEN_BEDROCK='ABSK...' bash scripts/redeploy-ec2.sh
+```
+
+It finishes when `http://127.0.0.1:8000/docs` returns `200`. If it
+fails, run `docker logs margin`. Optional: `AWS_REGION` (default
+`ap-southeast-2`).
+
+---
+
 ## Alternative: the Streamlit prototype
 
 For a minimal single-page UI (no React setup needed):
@@ -181,4 +211,6 @@ reach it.
 - `pdf_utils.py` — PDF / text extraction
 - `app.py` — Streamlit prototype UI
 - `margin/app/` — Matteo's React SPA (Vite + React 19 + TypeScript)
+- `scripts/redeploy-ec2.sh` — pull, rebuild SPA + API, restart Docker on EC2
+- `docs/deploy-ec2.md` — first-time EC2 install
 - `tests/` — Python unit tests (`pytest -q`)
