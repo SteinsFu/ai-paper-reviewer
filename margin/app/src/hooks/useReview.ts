@@ -66,16 +66,21 @@ export function useLibrary(): LibraryState {
   useEffect(() => {
     let alive = true;
     setLoading(true); setError(null);
-    // the fetch just simulates initial latency; the data itself comes from the store
     api.getLibrary()
-      .then(() => alive && setLoading(false))
+      .then((list) => {
+        if (!alive) return;
+        libraryStore.replace(list);
+        setLoading(false);
+      })
       .catch((e) => alive && (setError(String(e)), setLoading(false)));
     return () => { alive = false; };
   }, [nonce]);
 
-  const remove = useCallback(async (id: string) => { await api.deletePaper(id); }, []);
+  const remove = useCallback(async (id: string) => {
+    libraryStore.replace(await api.deletePaper(id));
+  }, []);
   const setArchived = useCallback(async (id: string, archived: boolean) => {
-    await api.setArchived(id, archived);
+    libraryStore.replace(await api.setArchived(id, archived));
   }, []);
 
   return { data, loading, error, reload, remove, setArchived };

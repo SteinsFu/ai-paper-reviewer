@@ -12,10 +12,17 @@ SONNET_4_5 = "au.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
 
 def get_client(region: str | None = None):
-    return boto3.client(
-        "bedrock-runtime",
-        region_name=region or os.getenv("AWS_REGION", "ap-southeast-2"),
-    )
+    kwargs: dict[str, Any] = {
+        "region_name": region or os.getenv("AWS_REGION", "ap-southeast-2"),
+    }
+    # `aws login` writes login_session into ~/.aws/config. boto3 then uses
+    # LoginProvider, which raises without botocore[crt] — even when a Bedrock
+    # API key is set. Explicit keys skip that chain; Converse still authenticates
+    # with AWS_BEARER_TOKEN_BEDROCK.
+    if os.getenv("AWS_BEARER_TOKEN_BEDROCK"):
+        kwargs["aws_access_key_id"] = "bedrock-api-key"
+        kwargs["aws_secret_access_key"] = "bedrock-api-key"
+    return boto3.client("bedrock-runtime", **kwargs)
 
 
 def converse_text(
