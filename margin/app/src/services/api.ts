@@ -15,6 +15,8 @@ export interface MarginApi {
   getAllReviews(): Promise<Record<string, ReviewBundle>>;
   /** conferences & journals that fit a paper, for the "Where to publish" tab */
   getVenues(paperId: string): Promise<VenueSuggestions>;
+  /** re-classify venues for this paper, ignoring cache */
+  refreshVenues(paperId: string): Promise<VenueSuggestions>;
   analyze(input: AnalyzeInput): AsyncIterable<AnalyzeProgress>;
   exportReport(paperId: string): Promise<ReviewReport>;
   /** permanently remove a review from the workspace; resolves to the new library */

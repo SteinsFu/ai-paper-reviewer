@@ -10,6 +10,7 @@ The catalog is ``data/venues.json``, built offline (``scripts/merge_venue_catalo
 
 from __future__ import annotations
 
+import hashlib
 import json
 from functools import lru_cache
 from pathlib import Path
@@ -62,7 +63,13 @@ Fields (use these ids exactly):
 - cv: computer vision, graphics, multimedia, VR/AR (CVPR, ICCV, SIGGRAPH)
 - systems: operating systems, networking, computer architecture, distributed systems (SOSP, OSDI, SIGCOMM)
 - security: computer security, privacy, cryptography (CCS, IEEE S&P, USENIX Security)
-- other: not CS, or a CS area outside this list (theory-only, education-only, …)
+- other: last resort only. Use when the text is not a research paper, is empty/placeholder,
+  or is clearly outside CS (or pure theory / CS education with no systems/ML/SE angle).
+
+If the paper is CS, always pick a listed CS tag. Map nearby areas:
+databases / IR / data mining / robotics / planning → ml
+graphics / VR / multimedia / vision → cv
+OS / networking / architecture / distributed systems → systems
 
 primary is required. secondary is a second CS field only if the paper is genuinely
 split across two of the CS fields above; otherwise set secondary to the empty string.
@@ -75,6 +82,32 @@ Do not invent venues or fields.
 def load_catalog() -> tuple[dict[str, Any], ...]:
     raw = json.loads(_CATALOG_PATH.read_text(encoding="utf-8"))
     return tuple(raw)
+
+
+def catalog_version() -> str:
+    """Fingerprint of the serving catalog + tag set. Cache key for GET /venues."""
+    h = hashlib.sha256()
+    h.update(_CATALOG_PATH.read_bytes())
+    h.update("|".join(FIELD_TAGS).encode())
+    return h.hexdigest()[:16]
+
+
+def cache_is_current(payload: dict[str, Any] | None) -> bool:
+    return bool(payload) and payload.get("catalogVersion") == catalog_version()
+
+
+def stamp_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    out = dict(payload)
+    out["catalogVersion"] = catalog_version()
+    return out
+
+
+def public_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "primary": payload["primary"],
+        "secondary": payload.get("secondary"),
+        "venues": payload.get("venues") or [],
+    }
 
 
 def difficulty_bar(acceptance_rate: float, prestige: float) -> float:
@@ -173,6 +206,7 @@ def suggest_venues(
             "url": entry["url"],
             "rationale": _rationale(entry, primary, secondary),
             "match": match_score(overall, entry["acceptanceRate"], entry["prestige"]),
+            "tag": primary if primary in tags else (secondary if secondary in tags else next(iter(tags))),
         }
         if entry.get("location"):
             row["location"] = entry["location"]

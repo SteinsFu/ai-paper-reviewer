@@ -22,6 +22,18 @@ const MOCK_FIELD_TAGS: Record<string, { primary: VenueFieldTag; secondary: Venue
   p5: { primary: "se", secondary: null },
 };
 
+function inferMockTag(field: string): VenueFieldTag {
+  const f = field.toLowerCase();
+  if (f.includes("language") || f.includes("nlp")) return "nlp";
+  if (f.includes("software")) return "se";
+  if (f.includes("haptic")) return "haptics";
+  if (f.includes("health") || f.includes("medical")) return "ml4h";
+  if (f.includes("vision") || f.includes("graphic")) return "cv";
+  if (f.includes("security")) return "security";
+  if (f.includes("human") || f.includes("interaction")) return "hci";
+  return "ml";
+}
+
 async function* analyze(_input: AnalyzeInput): AsyncIterable<AnalyzeProgress> {
   const perStep = 760;
   const steps = PIPELINE;
@@ -66,9 +78,13 @@ export const mockApi: MarginApi = {
     const venues = venuesFor(paperId).map((v) => ({
       ...v,
       match: matchScore(v, bundle.paper.overall),
+      tag: inferMockTag(v.field),
     }));
     const tags = MOCK_FIELD_TAGS[paperId] ?? MOCK_FIELD_TAGS.p1;
     return { ...tags, venues } satisfies VenueSuggestions;
+  },
+  async refreshVenues(paperId: string) {
+    return mockApi.getVenues(paperId);
   },
   analyze,
   async exportReport(paperId: string) {

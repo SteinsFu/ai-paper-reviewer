@@ -95,6 +95,12 @@ export const httpApi: MarginApi = {
 
   getVenues: (paperId) => json<VenueSuggestions>(`/paper/${encodeURIComponent(paperId)}/venues`),
 
+  refreshVenues: (paperId) =>
+    json<VenueSuggestions>(`/paper/${encodeURIComponent(paperId)}/venues/refresh`, {
+      method: "POST",
+      body: "{}",
+    }),
+
   analyze,
 
   exportReport: (paperId) => json<ReviewReport>(`/paper/${encodeURIComponent(paperId)}/report`),

@@ -44,6 +44,8 @@ def test_secondary_fit_is_lower():
     by_id = {v["id"]: v for v in ranked}
     assert by_id["chi"]["fit"] == venues.PRIMARY_FIT
     assert by_id["acl"]["fit"] == venues.SECONDARY_FIT
+    assert by_id["chi"]["tag"] == "hci"
+    assert by_id["acl"]["tag"] == "nlp"
 
 
 def test_other_returns_empty():
@@ -64,3 +66,4 @@ def test_cap_is_eight():
     ranked = venues.suggest_venues("hci", "nlp", 80)
     assert len(ranked) <= 8
     assert "tags" not in ranked[0]
+    assert ranked[0]["tag"] in venues.FIELD_TAGS

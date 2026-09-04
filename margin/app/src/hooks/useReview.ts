@@ -40,9 +40,13 @@ export function useReview(paperId: string): Async<ReviewBundle> {
 }
 
 /** Publication-venue recommendations for a paper ("Where to publish" tab). */
-export function useVenues(paperId: string): Async<VenueSuggestions> {
+export function useVenues(paperId: string): Async<VenueSuggestions> & {
+  refreshing: boolean;
+  reanalyze: () => void;
+} {
   const [state, setState] = useState<Omit<Async<VenueSuggestions>, "reload">>({ data: null, loading: true, error: null });
   const [nonce, setNonce] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const reload = useCallback(() => setNonce((n) => n + 1), []);
   useEffect(() => {
     let alive = true;
@@ -52,7 +56,14 @@ export function useVenues(paperId: string): Async<VenueSuggestions> {
       .catch((e) => alive && setState({ data: null, loading: false, error: String(e) }));
     return () => { alive = false; };
   }, [paperId, nonce]);
-  return { ...state, reload };
+  const reanalyze = useCallback(() => {
+    setRefreshing(true);
+    api.refreshVenues(paperId)
+      .then((data) => setState({ data, loading: false, error: null }))
+      .catch((e) => setState((s) => ({ ...s, error: String(e) })))
+      .finally(() => setRefreshing(false));
+  }, [paperId]);
+  return { ...state, reload, refreshing, reanalyze };
 }
 
 export function useLibrary(): LibraryState {

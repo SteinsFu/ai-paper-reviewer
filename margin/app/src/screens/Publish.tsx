@@ -24,6 +24,11 @@ const FIELD_LABEL: Record<VenueFieldTag, string> = {
   cv: "Computer Vision", systems: "Systems", security: "Security", other: "Other",
 };
 
+const TAG_BADGE: Record<VenueFieldTag, string> = {
+  hci: "HCI", nlp: "NLP", ml: "ML", ml4h: "ML4H", se: "SE",
+  haptics: "Haptics", cv: "CV", systems: "Systems", security: "Security", other: "Other",
+};
+
 /** days until an ISO deadline, or null for rolling / past */
 function daysUntil(iso: string | null): number | null {
   if (!iso) return null;
@@ -40,7 +45,7 @@ function chanceColor(v: number): string {
 
 export function Publish() {
   const { bundle, paperId } = usePaperBundle();
-  const { data, loading, error, reload } = useVenues(paperId);
+  const { data, loading, error, reload, refreshing, reanalyze } = useVenues(paperId);
   const venues = data?.venues ?? null;
   const primary = data?.primary;
   const secondary = data?.secondary;
@@ -115,12 +120,19 @@ export function Publish() {
           <h1 style={{ fontSize: 27, fontWeight: 700, letterSpacing: "-0.03em", margin: "0 0 6px" }}>
             Suggested venues for this paper
           </h1>
-          {!loading && primary && primary !== "other" && (
-            <div className="chip" style={{ height: 24, marginBottom: 10, fontWeight: 600 }}>
-              Tagged as {FIELD_LABEL[primary]}
-              {secondary && secondary !== "other" ? ` + ${FIELD_LABEL[secondary]}` : ""}
-            </div>
-          )}
+          <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+            {!loading && primary && primary !== "other" && (
+              <div className="chip" style={{ height: 24, fontWeight: 600 }}>
+                Tagged as {FIELD_LABEL[primary]}
+                {secondary && secondary !== "other" ? ` + ${FIELD_LABEL[secondary]}` : ""}
+              </div>
+            )}
+            <button className="btn btn-sm" onClick={reanalyze} disabled={loading || refreshing}
+              title="Re-run field classification for this paper">
+              <Icon name="restore" size={14} />
+              {refreshing ? "Reanalyzing…" : "Reanalyze suggestions"}
+            </button>
+          </div>
           <p style={{ fontSize: 14.5, color: "var(--text-2)", margin: 0, lineHeight: 1.55, maxWidth: 660 }}>
             Conferences and journals that align with <em>{bundle.paper.title}</em>, ranked by how well this paper's
             score matches each venue's bar. Each estimate weighs the paper's health of{" "}
@@ -300,6 +312,12 @@ function VenueCard({ v, chance, potential, index }: {
               letterSpacing: "0.03em", background: "var(--surface-3)", color: "var(--text-2)" }}>
               {KIND_LABEL[v.kind]}
             </span>
+            {v.tag && v.tag !== "other" && (
+              <span className="chip" style={{ height: 20, fontSize: 11, fontWeight: 700, textTransform: "uppercase",
+                letterSpacing: "0.03em", background: "var(--accent-soft)", color: "var(--accent-press)" }}>
+                {TAG_BADGE[v.tag]}
+              </span>
+            )}
             <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em" }}>{v.name}</span>
             <PrestigeStars n={v.prestige} />
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent-press)" }}>{v.tierLabel}</span>
