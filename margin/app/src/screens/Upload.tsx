@@ -90,7 +90,7 @@ export function Upload() {
               Drop a paper to review
             </div>
             <div style={{ fontSize:14.5, color:"var(--text-2)", marginBottom:22 }}>
-              PDF, LaTeX source, or Word — up to 60 pages
+              PDF, LaTeX source, or Word — up to 60 pages / 50 MB
             </div>
             <button className="btn btn-primary btn-lg" onClick={(e) => { e.stopPropagation(); openPicker(); }}>
               <Icon name="doc" size={18}/> Choose a manuscript

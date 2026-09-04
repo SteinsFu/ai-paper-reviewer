@@ -186,6 +186,11 @@ Confirm access is enabled for Claude Haiku 4.5 and Sonnet 4.5.
 (the uvicorn output) for the actual traceback; the frontend surfaces
 the exception message from the pipeline.
 
+**Upload fails with 413 / file too large** — nginx's default body
+limit is 1 MB. Redeploy (`scripts/redeploy-ec2.sh`) so
+`client_max_body_size 50M` is applied, or add that line to the nginx
+site config and reload.
+
 **Nothing happens after `npm run dev` starts** — Make sure the backend
 is running on port 8000; the frontend uses `VITE_API_BASE_URL` to
 reach it.

@@ -34,6 +34,11 @@ from pdf_utils import extract_text
 
 load_dotenv()
 
+# Upload cap. nginx `client_max_body_size` must match (see docs/deploy-ec2.md).
+# Starlette's 1 MiB default applies to non-file form fields, not UploadFile;
+# nginx's 1 MiB default is what actually rejected typical PDFs.
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MiB — enough for a 60-page paper with figures
+
 # CORS: Vite dev server + Streamlit (for parity), plus any override via env.
 _default_origins = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8501"
 _ALLOWED_ORIGINS = [o.strip() for o in os.getenv("MARGIN_ALLOWED_ORIGINS", _default_origins).split(",") if o.strip()]
@@ -170,6 +175,12 @@ async def analyze(file: UploadFile, venue: str = "", model: str = HAIKU_4_5):
     """Accept a PDF/txt/md upload; stream AnalyzeProgress events via SSE."""
     filename = file.filename or "upload"
     data = await file.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        max_mb = MAX_UPLOAD_BYTES // (1024 * 1024)
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large (max {max_mb} MB).",
+        )
     try:
         paper_text = extract_text(filename, data)
     except ValueError as exc:

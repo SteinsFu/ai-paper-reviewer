@@ -27,7 +27,12 @@ cd ~/ai-paper-reviewer/margin/app
 npm install
 VITE_API_MODE=http VITE_API_BASE_URL= npm run build
 sudo cp -r dist/* /var/www/margin/
-sudo nginx -s reload
+# Raise nginx body size (default 1m rejects typical PDFs). Keep in sync
+# with server.py MAX_UPLOAD_BYTES.
+sudo tee /etc/nginx/conf.d/margin-upload.conf >/dev/null <<'EOF'
+client_max_body_size 50M;
+EOF
+sudo nginx -t && sudo nginx -s reload
 
 # Build the backend image
 echo ""

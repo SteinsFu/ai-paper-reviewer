@@ -97,6 +97,30 @@ def test_analyze_streams_all_pipeline_steps_and_ends_with_paper_id(client, stub_
     assert all(f["steps"] == server.PIPELINE_STEPS for f in frames)
 
 
+def test_analyze_rejects_file_over_max_upload(client, monkeypatch):
+    monkeypatch.setattr(server, "MAX_UPLOAD_BYTES", 100)
+    response = client.post(
+        "/analyze",
+        files={"file": ("sample.txt", b"x" * 200, "text/plain")},
+    )
+    assert response.status_code == 413
+    assert "too large" in response.json()["detail"].lower()
+
+
+def test_analyze_accepts_file_over_one_megabyte(client, stub_pipeline):
+    # nginx's historic 1 MiB cap is what blocked real papers; FastAPI must not.
+    payload = ("Body paragraph.\n\n" * 80_000).encode()  # ~1.4 MiB
+    assert len(payload) > 1024 * 1024
+    response = client.post(
+        "/analyze",
+        files={"file": ("sample.txt", payload, "text/plain")},
+    )
+    assert response.status_code == 200
+    frames = _parse_sse_frames(response.content)
+    assert frames[-1]["done"] is True
+    assert "paperId" in frames[-1]
+
+
 def test_analyze_rejects_unsupported_file_type(client):
     response = client.post(
         "/analyze",
