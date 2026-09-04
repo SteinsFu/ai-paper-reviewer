@@ -6,7 +6,7 @@
    ============================================================ */
 import type { MarginApi } from "./api";
 import type {
-  AnalyzeInput, AnalyzeProgress, LibraryPaper, PublicationVenue, ReviewBundle, ReviewReport,
+  AnalyzeInput, AnalyzeProgress, LibraryPaper, ReviewBundle, ReviewReport, VenueSuggestions,
 } from "./types";
 
 const BASE_URL: string =
@@ -93,7 +93,7 @@ export const httpApi: MarginApi = {
     return Object.fromEntries(entries);
   },
 
-  getVenues: (paperId) => json<PublicationVenue[]>(`/paper/${encodeURIComponent(paperId)}/venues`),
+  getVenues: (paperId) => json<VenueSuggestions>(`/paper/${encodeURIComponent(paperId)}/venues`),
 
   analyze,
 

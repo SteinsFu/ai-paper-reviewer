@@ -8,14 +8,20 @@ import { SkeletonCard } from "../components/Skeleton";
 import { ErrorState } from "../components/ErrorState";
 import { usePaperBundle } from "./PaperLayout";
 import { useVenues, useReviewState } from "../hooks/useReview";
-import { estimateAcceptance } from "../data/venues";
+import { estimateAcceptance, matchScore } from "../data/venues";
 import { CATEGORIES } from "../data/mock";
-import type { Annotation, CategoryId, PublicationVenue } from "../services/types";
+import type { Annotation, CategoryId, PublicationVenue, VenueFieldTag } from "../services/types";
 
-type Sort = "fit" | "chance" | "deadline" | "prestige";
+type Sort = "match" | "fit" | "chance" | "deadline" | "prestige";
 
 const KIND_LABEL: Record<PublicationVenue["kind"], string> = {
   conference: "Conference", journal: "Journal", workshop: "Workshop",
+};
+
+const FIELD_LABEL: Record<VenueFieldTag, string> = {
+  hci: "HCI", nlp: "NLP", ml: "ML", ml4h: "ML for Health",
+  se: "Software Engineering", haptics: "Haptics",
+  cv: "Computer Vision", systems: "Systems", security: "Security", other: "Other",
 };
 
 /** days until an ISO deadline, or null for rolling / past */
@@ -34,9 +40,12 @@ function chanceColor(v: number): string {
 
 export function Publish() {
   const { bundle, paperId } = usePaperBundle();
-  const { data: venues, loading, error, reload } = useVenues(paperId);
+  const { data, loading, error, reload } = useVenues(paperId);
+  const venues = data?.venues ?? null;
+  const primary = data?.primary;
+  const secondary = data?.secondary;
   const { resolved, userNotes } = useReviewState(paperId);
-  const [sort, setSort] = useState<Sort>("fit");
+  const [sort, setSort] = useState<Sort>("match");
   const overall = bundle.paper.overall;
 
   // the still-open findings drive the estimate down; resolving them lifts it
@@ -57,6 +66,7 @@ export function Publish() {
   const ranked = useMemo(() => {
     if (!venues) return [];
     // current chance reflects open issues; potential = if every issue were resolved
+    const matchOf = (v: PublicationVenue) => v.match ?? matchScore(v, overall);
     const rows = venues.map((v) => ({
       v,
       chance: estimateAcceptance(v, overall, openIssues),
@@ -67,6 +77,7 @@ export function Publish() {
       return d == null ? Number.POSITIVE_INFINITY : d < 0 ? Number.POSITIVE_INFINITY - 1 : d;
     };
     const cmp: Record<Sort, (a: typeof rows[number], b: typeof rows[number]) => number> = {
+      match: (a, b) => matchOf(b.v) - matchOf(a.v) || b.v.prestige - a.v.prestige,
       fit: (a, b) => b.v.fit - a.v.fit,
       chance: (a, b) => b.chance - a.chance,
       prestige: (a, b) => b.v.prestige - a.v.prestige || b.v.fit - a.v.fit,
@@ -104,9 +115,15 @@ export function Publish() {
           <h1 style={{ fontSize: 27, fontWeight: 700, letterSpacing: "-0.03em", margin: "0 0 6px" }}>
             Suggested venues for this paper
           </h1>
+          {!loading && primary && primary !== "other" && (
+            <div className="chip" style={{ height: 24, marginBottom: 10, fontWeight: 600 }}>
+              Tagged as {FIELD_LABEL[primary]}
+              {secondary && secondary !== "other" ? ` + ${FIELD_LABEL[secondary]}` : ""}
+            </div>
+          )}
           <p style={{ fontSize: 14.5, color: "var(--text-2)", margin: 0, lineHeight: 1.55, maxWidth: 660 }}>
-            Conferences and journals that align with <em>{bundle.paper.title}</em>, ranked by topical fit and your
-            estimated chances. Each estimate weighs the paper's health of{" "}
+            Conferences and journals that align with <em>{bundle.paper.title}</em>, ranked by how well this paper's
+            score matches each venue's bar. Each estimate weighs the paper's health of{" "}
             <span className="num" style={{ fontWeight: 700, color: "var(--text)" }}>{overall}/100</span>, the venue's
             selectivity, and the <strong style={{ color: "var(--text)" }}>specific issues still open</strong> in the
             review — resolving findings in the reader raises the odds.
@@ -114,7 +131,7 @@ export function Publish() {
         </div>
 
         {/* open-weaknesses callout — the estimates react to these */}
-        {!loading && openIssues.length > 0 && topWeakness && (
+        {!loading && ranked.length > 0 && openIssues.length > 0 && topWeakness && (
           <div className="card" style={{ padding: "13px 16px", marginBottom: 16, display: "flex",
             alignItems: "center", gap: 12, background: "var(--warn-soft)", border: "1px solid var(--warn)" }}>
             <span style={{ width: 30, height: 30, borderRadius: 9, flex: "0 0 auto", display: "grid",
@@ -147,23 +164,36 @@ export function Publish() {
           </div>
         )}
 
-        {/* sort control */}
-        <div className="no-print" style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-          marginBottom: 13, gap: 12, flexWrap: "wrap" }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0, letterSpacing: "-0.02em", color: "var(--text-2)" }}>
-            {loading ? "Finding venues…" : `${ranked.length} venues`}
-          </h2>
-          <Segmented id="venue-sort" value={sort} onChange={(v) => setSort(v as Sort)} options={[
-            { value: "fit", label: "Best fit" },
-            { value: "chance", label: "Best odds" },
-            { value: "deadline", label: "Deadline" },
-            { value: "prestige", label: "Prestige" },
-          ]} />
-        </div>
+        {(loading || ranked.length > 0) && (
+          <div className="no-print" style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+            marginBottom: 13, gap: 12, flexWrap: "wrap" }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0, letterSpacing: "-0.02em", color: "var(--text-2)" }}>
+              {loading ? "Finding venues…" : `${ranked.length} venues`}
+            </h2>
+            {!loading && (
+              <Segmented id="venue-sort" value={sort} onChange={(v) => setSort(v as Sort)} options={[
+                { value: "match", label: "Best match" },
+                { value: "fit", label: "Best fit" },
+                { value: "chance", label: "Best odds" },
+                { value: "deadline", label: "Deadline" },
+                { value: "prestige", label: "Prestige" },
+              ]} />
+            )}
+          </div>
+        )}
 
         {loading ? (
           <div style={{ display: "grid", gap: 14 }}>
             {[0, 1, 2, 3].map((i) => <SkeletonCard key={i} height={150} />)}
+          </div>
+        ) : ranked.length === 0 ? (
+          <div className="card" style={{ padding: "28px 22px", textAlign: "center" }}>
+            <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 6 }}>
+              No catalog match for this topic.
+            </div>
+            <p style={{ fontSize: 13.5, color: "var(--text-2)", lineHeight: 1.5, margin: 0 }}>
+              Venue suggestions cover CS (ML, NLP, HCI, SE, CV, systems, security, haptics). This paper landed outside that set.
+            </p>
           </div>
         ) : (
           <div style={{ display: "grid", gap: 14 }}>
@@ -213,7 +243,10 @@ function DeadlineChip({ iso, note }: { iso: string | null; note?: string }) {
   const days = daysUntil(iso);
   let label: string, color: string, soft: string, sub: string | undefined;
   if (iso == null) {
-    label = "Rolling"; color = "var(--text-2)"; soft = "var(--surface-3)"; sub = note ?? "No fixed deadline";
+    const rolling = /rolling/i.test(note ?? "");
+    label = rolling ? "Rolling" : "Next cycle";
+    color = "var(--text-2)"; soft = "var(--surface-3)";
+    sub = note ?? "No fixed deadline";
   } else if (days == null || days < 0) {
     label = "Next cycle"; color = "var(--text-2)"; soft = "var(--surface-3)"; sub = `Last: ${fmtDate(iso)}`;
   } else {
@@ -292,7 +325,7 @@ function VenueCard({ v, chance, potential, index }: {
               <span className="num" style={{ fontSize: 12.5, fontWeight: 700, width: 34, textAlign: "right" }}>{v.fit}%</span>
             </div>
             <Meta label="Accept rate" value={`${v.acceptanceRate}%`} />
-            <Meta label="h5-index" value={String(v.h5)} />
+            {v.h5 > 0 && <Meta label="h5-index" value={String(v.h5)} />}
           </div>
         </div>
 

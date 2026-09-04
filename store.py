@@ -43,6 +43,12 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 
 CREATE INDEX IF NOT EXISTS papers_updated ON papers(updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS venue_suggestions (
+  paper_id     TEXT PRIMARY KEY REFERENCES papers(id) ON DELETE CASCADE,
+  payload_json TEXT NOT NULL,
+  updated_at   INTEGER NOT NULL
+);
 """
 
 
@@ -173,6 +179,7 @@ def upsert_bundle(paper_id: str, bundle: dict[str, Any]) -> dict[str, Any]:
             """,
             (paper_id, payload, now),
         )
+        conn.execute("DELETE FROM venue_suggestions WHERE paper_id = ?", (paper_id,))
         conn.commit()
         row = conn.execute("SELECT * FROM papers WHERE id = ?", (paper_id,)).fetchone()
         return _entry_from_row(row)
@@ -182,6 +189,36 @@ def delete_paper(paper_id: str) -> None:
     with _lock:
         conn = _connect()
         conn.execute("DELETE FROM papers WHERE id = ?", (paper_id,))
+        conn.commit()
+
+
+def get_venue_suggestions(paper_id: str) -> dict[str, Any] | None:
+    with _lock:
+        conn = _connect()
+        row = conn.execute(
+            "SELECT payload_json FROM venue_suggestions WHERE paper_id = ?",
+            (paper_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return json.loads(row["payload_json"])
+
+
+def set_venue_suggestions(paper_id: str, payload: dict[str, Any]) -> None:
+    now = _now_ms()
+    blob = json.dumps(payload, ensure_ascii=False)
+    with _lock:
+        conn = _connect()
+        conn.execute(
+            """
+            INSERT INTO venue_suggestions (paper_id, payload_json, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(paper_id) DO UPDATE SET
+              payload_json = excluded.payload_json,
+              updated_at = excluded.updated_at
+            """,
+            (paper_id, blob, now),
+        )
         conn.commit()
 
 

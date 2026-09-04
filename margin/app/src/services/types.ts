@@ -252,6 +252,16 @@ export interface PublicationVenue {
   location?: string;            // host city (conferences)
   url: string;                  // official venue page
   rationale: string;            // why it fits this paper
+  /** 0–100 how close the paper's overall score sits to this venue's bar */
+  match?: number;
+}
+
+export type VenueFieldTag = "hci" | "nlp" | "ml" | "ml4h" | "se" | "haptics" | "cv" | "systems" | "security" | "other";
+
+export interface VenueSuggestions {
+  primary: VenueFieldTag;
+  secondary: VenueFieldTag | null;
+  venues: PublicationVenue[];
 }
 
 /* Everything one paper review needs — one bundle, one fetch */

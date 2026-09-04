@@ -6,7 +6,7 @@ import type { PaperReviewState } from "../services/reviewStore";
 import { loadAllReviews } from "../services/searchIndex";
 import { CAT_ORDER } from "../data/mock";
 import type {
-  Annotation, CategoryId, LibraryPaper, PublicationVenue, ReviewBundle, ReviewReport, SeverityId,
+  Annotation, CategoryId, LibraryPaper, ReviewBundle, ReviewReport, SeverityId, VenueSuggestions,
 } from "../services/types";
 
 interface Async<T> {
@@ -40,8 +40,8 @@ export function useReview(paperId: string): Async<ReviewBundle> {
 }
 
 /** Publication-venue recommendations for a paper ("Where to publish" tab). */
-export function useVenues(paperId: string): Async<PublicationVenue[]> {
-  const [state, setState] = useState<Omit<Async<PublicationVenue[]>, "reload">>({ data: null, loading: true, error: null });
+export function useVenues(paperId: string): Async<VenueSuggestions> {
+  const [state, setState] = useState<Omit<Async<VenueSuggestions>, "reload">>({ data: null, loading: true, error: null });
   const [nonce, setNonce] = useState(0);
   const reload = useCallback(() => setNonce((n) => n + 1), []);
   useEffect(() => {

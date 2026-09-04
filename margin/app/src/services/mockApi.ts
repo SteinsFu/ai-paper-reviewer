@@ -4,16 +4,23 @@
    states are visible and the UI is honest about being async.
    ============================================================ */
 import type { MarginApi } from "./api";
-import type { AnalyzeInput, AnalyzeProgress, ReviewBundle } from "./types";
+import type { AnalyzeInput, AnalyzeProgress, ReviewBundle, VenueFieldTag, VenueSuggestions } from "./types";
 import { libraryStore } from "./libraryStore";
 import { BUNDLES, PIPELINE } from "../data/mock";
-import { venuesFor } from "../data/venues";
+import { matchScore, venuesFor } from "../data/venues";
 
 const delay = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
 const jitter = () => 180 + Math.random() * 220;
 
 // papers without a dedicated review (e.g. the p4 draft) fall back to p1's sample
 const bundleFor = (id: string) => BUNDLES[id] ?? BUNDLES.p1;
+
+const MOCK_FIELD_TAGS: Record<string, { primary: VenueFieldTag; secondary: VenueFieldTag | null }> = {
+  p1: { primary: "hci", secondary: "nlp" },
+  p2: { primary: "ml", secondary: "nlp" },
+  p3: { primary: "haptics", secondary: "hci" },
+  p5: { primary: "se", secondary: null },
+};
 
 async function* analyze(_input: AnalyzeInput): AsyncIterable<AnalyzeProgress> {
   const perStep = 760;
@@ -55,7 +62,13 @@ export const mockApi: MarginApi = {
   },
   async getVenues(paperId: string) {
     await delay(jitter());
-    return venuesFor(paperId);
+    const bundle = bundleFor(paperId);
+    const venues = venuesFor(paperId).map((v) => ({
+      ...v,
+      match: matchScore(v, bundle.paper.overall),
+    }));
+    const tags = MOCK_FIELD_TAGS[paperId] ?? MOCK_FIELD_TAGS.p1;
+    return { ...tags, venues } satisfies VenueSuggestions;
   },
   analyze,
   async exportReport(paperId: string) {

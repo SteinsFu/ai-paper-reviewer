@@ -4,7 +4,7 @@
    by mockApi; a real HTTP backend implements the same shape.
    ============================================================ */
 import type {
-  AnalyzeInput, AnalyzeProgress, LibraryPaper, PublicationVenue, ReviewBundle, ReviewReport,
+  AnalyzeInput, AnalyzeProgress, LibraryPaper, ReviewBundle, ReviewReport, VenueSuggestions,
 } from "./types";
 
 export interface MarginApi {
@@ -14,7 +14,7 @@ export interface MarginApi {
       search (F4) and analytics (F6) without N round-trips */
   getAllReviews(): Promise<Record<string, ReviewBundle>>;
   /** conferences & journals that fit a paper, for the "Where to publish" tab */
-  getVenues(paperId: string): Promise<PublicationVenue[]>;
+  getVenues(paperId: string): Promise<VenueSuggestions>;
   analyze(input: AnalyzeInput): AsyncIterable<AnalyzeProgress>;
   exportReport(paperId: string): Promise<ReviewReport>;
   /** permanently remove a review from the workspace; resolves to the new library */
