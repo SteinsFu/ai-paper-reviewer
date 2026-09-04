@@ -236,6 +236,9 @@ server {
     server_name _;
     root /var/www/margin;
     index index.html;
+    # Default is 1m — too small for a typical PDF. Keep in sync with
+    # server.py MAX_UPLOAD_BYTES.
+    client_max_body_size 50M;
 
     location / {
         try_files $uri $uri/ /index.html;
@@ -279,6 +282,7 @@ Browser: `http://EIP` (app), `http://EIP/docs` (Swagger).
 | Calls `localhost:8000` | `VITE_API_BASE_URL` was unset; rebuild with empty `=` |
 | Bedrock / expired token | `docker logs margin`; new long-term key; `docker rm -f margin` and `docker run` again |
 | CORS errors | Should not happen on this setup; you are same-origin |
+| 413 / file too large | nginx still at the 1 MB default. Redeploy, or add `client_max_body_size 50M;` and `sudo nginx -t && sudo systemctl reload nginx` |
 
 Reviews live in SQLite at `~/margin-data/margin.db` (the `-v ~/margin-data:/data`
 mount). Rebuilds keep the library. Omit the mount and a new container starts empty.
