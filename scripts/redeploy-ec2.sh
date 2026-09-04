@@ -66,5 +66,6 @@ for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
   fi
   sleep 2
 done
-echo "status $code failed. docker logs margin" >&2
+echo "status $code failed" >&2
+docker logs margin >&2 || true
 exit 1

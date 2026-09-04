@@ -1,0 +1,1347 @@
+[
+  {
+    "id": "acmmm",
+    "name": "ACMMM",
+    "fullName": "ACM Multimedia",
+    "kind": "conference",
+    "field": "Computer Vision",
+    "tags": [
+      "cv"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM Multimedia.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://dl.acm.org/conference/mm"
+  },
+  {
+    "id": "cvpr",
+    "name": "CVPR",
+    "fullName": "IEEE Conference on Computer Vision and Pattern Recognition",
+    "kind": "conference",
+    "field": "Computer Vision",
+    "tags": [
+      "cv"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — IEEE Conference on Computer Vision and Pattern Recognition.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://cvpr.thecvf.com/"
+  },
+  {
+    "id": "eccv",
+    "name": "ECCV",
+    "fullName": "European Conference on Computer Vision",
+    "kind": "conference",
+    "field": "Computer Vision",
+    "tags": [
+      "cv"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — European Conference on Computer Vision.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://eccv.ecva.net/"
+  },
+  {
+    "id": "iccv",
+    "name": "ICCV",
+    "fullName": "IEEE International Conference on Computer Vision",
+    "kind": "conference",
+    "field": "Computer Vision",
+    "tags": [
+      "cv"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — IEEE International Conference on Computer Vision.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://iccv.thecvf.com/"
+  },
+  {
+    "id": "ismar",
+    "name": "ISMAR",
+    "fullName": "IEEE/ACM International Symposium on Mixed and Augmented Reality",
+    "kind": "conference",
+    "field": "Computer Vision",
+    "tags": [
+      "cv"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — IEEE/ACM International Symposium on Mixed and Augmented Reality.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.ieeeismar.org/"
+  },
+  {
+    "id": "siggraph",
+    "name": "SIGGRAPH",
+    "fullName": "ACM SIG International Conference on Computer Graphics and Interactive Techniques",
+    "kind": "conference",
+    "field": "Computer Vision",
+    "tags": [
+      "cv"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM SIG International Conference on Computer Graphics and Interactive Techniques.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.siggraph.org/"
+  },
+  {
+    "id": "siggraphasia",
+    "name": "SIGGRAPH Asia",
+    "fullName": "SIGGRAPH Asia",
+    "kind": "conference",
+    "field": "Computer Vision",
+    "tags": [
+      "cv"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — SIGGRAPH Asia.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://asia.siggraph.org/"
+  },
+  {
+    "id": "vr",
+    "name": "VR",
+    "fullName": "IEEE Conference on Virtual Reality and 3D User Interfaces",
+    "kind": "conference",
+    "field": "Computer Vision",
+    "tags": [
+      "cv"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — IEEE Conference on Virtual Reality and 3D User Interfaces.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://ieeevr.org/"
+  },
+  {
+    "id": "eurohaptics",
+    "name": "Eurohaptics",
+    "fullName": "Eurohaptics Conference",
+    "kind": "conference",
+    "field": "Haptics",
+    "tags": [
+      "haptics"
+    ],
+    "prestige": 3,
+    "tierLabel": "Strong (specialist)",
+    "esteem": "The European sister to World Haptics — the other major haptics conference.",
+    "acceptanceRate": 40,
+    "h5": 25,
+    "url": "https://eurohaptics.org/"
+  },
+  {
+    "id": "toh",
+    "name": "IEEE ToH",
+    "fullName": "IEEE Transactions on Haptics",
+    "kind": "journal",
+    "field": "Haptics",
+    "tags": [
+      "haptics"
+    ],
+    "prestige": 4,
+    "tierLabel": "Premier journal",
+    "esteem": "The leading dedicated haptics journal — the specialist gold standard.",
+    "acceptanceRate": 22,
+    "h5": 40,
+    "url": "https://www.computer.org/csdl/journal/th"
+  },
+  {
+    "id": "whc",
+    "name": "World Haptics",
+    "fullName": "IEEE World Haptics Conference",
+    "kind": "conference",
+    "field": "Haptics",
+    "tags": [
+      "haptics"
+    ],
+    "prestige": 4,
+    "tierLabel": "Top-tier (specialist)",
+    "esteem": "The flagship haptics conference — the ICRA of the haptics community.",
+    "acceptanceRate": 40,
+    "h5": 30,
+    "url": "https://www.worldhaptics.org/"
+  },
+  {
+    "id": "chi",
+    "name": "CHI",
+    "fullName": "ACM CHI Conference on Human Factors in Computing Systems",
+    "kind": "conference",
+    "field": "Human-Computer Interaction",
+    "tags": [
+      "hci"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "The premier HCI venue — CORE A*, the field's most prestigious conference.",
+    "acceptanceRate": 24,
+    "h5": 122,
+    "location": "Yokohama, Japan",
+    "url": "https://dl.acm.org/conference/chi"
+  },
+  {
+    "id": "cscw",
+    "name": "CSCW",
+    "fullName": "ACM Conference on Computer-Supported Cooperative Work",
+    "kind": "conference",
+    "field": "Human-Computer Interaction",
+    "tags": [
+      "hci"
+    ],
+    "prestige": 4,
+    "tierLabel": "Top-tier",
+    "esteem": "Leading venue for collaboration and social computing — CORE A.",
+    "acceptanceRate": 26,
+    "h5": 62,
+    "url": "https://dl.acm.org/conference/cscw"
+  },
+  {
+    "id": "dis",
+    "name": "DIS",
+    "fullName": "ACM Conference on Designing Interactive Systems",
+    "kind": "conference",
+    "field": "Interaction Design",
+    "tags": [
+      "hci"
+    ],
+    "prestige": 3,
+    "tierLabel": "Strong",
+    "esteem": "A respected design-oriented HCI venue — CORE A/B.",
+    "acceptanceRate": 26,
+    "h5": 44,
+    "url": "https://dl.acm.org/conference/dis"
+  },
+  {
+    "id": "hri",
+    "name": "HRI",
+    "fullName": "ACM/IEEE International Conference on Human-Robot Interaction",
+    "kind": "conference",
+    "field": "Human-Computer Interaction",
+    "tags": [
+      "hci"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM/IEEE International Conference on Human-Robot Interaction.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://humanrobotinteraction.org/"
+  },
+  {
+    "id": "imwut",
+    "name": "IMWUT",
+    "fullName": "Proceedings of the ACM on Interactive, Mobile, Wearable and Ubiquitous Technologies",
+    "kind": "journal",
+    "field": "Human-Computer Interaction",
+    "tags": [
+      "hci"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "The archival home of UbiComp — CORE A* ubiquitous-computing work now publishes here.",
+    "acceptanceRate": 20,
+    "h5": 56,
+    "url": "https://dl.acm.org/journal/imwut"
+  },
+  {
+    "id": "interact",
+    "name": "INTERACT",
+    "fullName": "IFIP TC13 International Conference on Human-Computer Interaction",
+    "kind": "conference",
+    "field": "Human-Computer Interaction",
+    "tags": [
+      "hci"
+    ],
+    "prestige": 3,
+    "tierLabel": "Strong",
+    "esteem": "The IFIP HCI conference — CORE A, a broad international HCI venue.",
+    "acceptanceRate": 28,
+    "h5": 28,
+    "url": "https://www.ifip-tc13.org/interact/"
+  },
+  {
+    "id": "iui",
+    "name": "IUI",
+    "fullName": "ACM Conference on Intelligent User Interfaces",
+    "kind": "conference",
+    "field": "Intelligent User Interfaces",
+    "tags": [
+      "hci"
+    ],
+    "prestige": 4,
+    "tierLabel": "Top-tier",
+    "esteem": "The leading venue at the AI × HCI boundary — CORE A.",
+    "acceptanceRate": 26,
+    "h5": 40,
+    "url": "https://dl.acm.org/conference/iui"
+  },
+  {
+    "id": "mobilehci",
+    "name": "MobileHCI",
+    "fullName": "ACM International Conference on Mobile Human-Computer Interaction",
+    "kind": "conference",
+    "field": "Human-Computer Interaction",
+    "tags": [
+      "hci"
+    ],
+    "prestige": 4,
+    "tierLabel": "Top-tier",
+    "esteem": "The leading mobile-HCI conference — CORE A.",
+    "acceptanceRate": 24,
+    "h5": 32,
+    "url": "https://dl.acm.org/conference/mhci"
+  },
+  {
+    "id": "percom",
+    "name": "PERCOM",
+    "fullName": "IEEE International Conference on Pervasive Computing and Communications",
+    "kind": "conference",
+    "field": "Human-Computer Interaction",
+    "tags": [
+      "hci"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — IEEE International Conference on Pervasive Computing and Communications.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.percom.org/"
+  },
+  {
+    "id": "tochi",
+    "name": "TOCHI",
+    "fullName": "ACM Transactions on Computer-Human Interaction",
+    "kind": "journal",
+    "field": "Human-Computer Interaction",
+    "tags": [
+      "hci"
+    ],
+    "prestige": 5,
+    "tierLabel": "Premier journal",
+    "esteem": "The flagship HCI journal — for deeper, extended treatments.",
+    "acceptanceRate": 18,
+    "h5": 55,
+    "url": "https://dl.acm.org/journal/tochi"
+  },
+  {
+    "id": "uist",
+    "name": "UIST",
+    "fullName": "ACM Symposium on User Interface Software and Technology",
+    "kind": "conference",
+    "field": "HCI Systems",
+    "tags": [
+      "hci"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "The top venue for novel interaction techniques and UI systems — CORE A*.",
+    "acceptanceRate": 24,
+    "h5": 66,
+    "url": "https://dl.acm.org/conference/uist"
+  },
+  {
+    "id": "aaai",
+    "name": "AAAI",
+    "fullName": "AAAI Conference on Artificial Intelligence",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 4,
+    "tierLabel": "Top-tier",
+    "esteem": "A broad, highly visible AI conference — CORE A, more inclusive than NeurIPS/ICML.",
+    "acceptanceRate": 24,
+    "h5": 180,
+    "url": "https://aaai.org/conference/aaai/"
+  },
+  {
+    "id": "aistats",
+    "name": "AISTATS",
+    "fullName": "International Conference on Artificial Intelligence and Statistics",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 4,
+    "tierLabel": "Top-tier",
+    "esteem": "A strong statistical-ML conference — CORE A.",
+    "acceptanceRate": 28,
+    "h5": 90,
+    "url": "https://aistats.org/"
+  },
+  {
+    "id": "colt",
+    "name": "COLT",
+    "fullName": "Conference on Learning Theory",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — Conference on Learning Theory.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://learningtheory.org/"
+  },
+  {
+    "id": "ec",
+    "name": "EC",
+    "fullName": "ACM Conference on Economics and Computation",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM Conference on Economics and Computation.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://dl.acm.org/conference/sigecom"
+  },
+  {
+    "id": "icaps",
+    "name": "ICAPS",
+    "fullName": "International Conference on Automated Planning and Scheduling",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — International Conference on Automated Planning and Scheduling.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.icaps-conference.org/"
+  },
+  {
+    "id": "icde",
+    "name": "ICDE",
+    "fullName": "International Conference on Data Engineering",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — International Conference on Data Engineering.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://ieee-icde.org/"
+  },
+  {
+    "id": "icdm",
+    "name": "ICDM",
+    "fullName": "IEEE International Conference on Data Mining",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — IEEE International Conference on Data Mining.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.ieee-icdm.org/"
+  },
+  {
+    "id": "iclr",
+    "name": "ICLR",
+    "fullName": "International Conference on Learning Representations",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "A flagship venue for representation learning and deep learning — CORE A*.",
+    "acceptanceRate": 31,
+    "h5": 296,
+    "url": "https://iclr.cc/"
+  },
+  {
+    "id": "icml",
+    "name": "ICML",
+    "fullName": "International Conference on Machine Learning",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "A flagship ML conference — CORE A*, on par with NeurIPS for methods work.",
+    "acceptanceRate": 27,
+    "h5": 268,
+    "url": "https://icml.cc/"
+  },
+  {
+    "id": "icra",
+    "name": "ICRA",
+    "fullName": "IEEE International Conference on Robotics and Automation",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — IEEE International Conference on Robotics and Automation.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.ieee-ras.org/conferences-workshops/fully-sponsored/icra"
+  },
+  {
+    "id": "ijcai",
+    "name": "IJCAI",
+    "fullName": "International Joint Conference on Artificial Intelligence",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 4,
+    "tierLabel": "Top-tier",
+    "esteem": "A flagship general-AI conference — CORE A*, broader than NeurIPS/ICML.",
+    "acceptanceRate": 20,
+    "h5": 120,
+    "url": "https://www.ijcai.org/"
+  },
+  {
+    "id": "jmlr",
+    "name": "JMLR",
+    "fullName": "Journal of Machine Learning Research",
+    "kind": "journal",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Premier journal",
+    "esteem": "The premier open-access ML journal — the archival counterpart to NeurIPS/ICML.",
+    "acceptanceRate": 18,
+    "h5": 110,
+    "url": "https://www.jmlr.org/"
+  },
+  {
+    "id": "kdd",
+    "name": "KDD",
+    "fullName": "ACM SIGKDD Conference on Knowledge Discovery and Data Mining",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "The flagship data-mining conference — CORE A*, CSRankings ML/mining.",
+    "acceptanceRate": 20,
+    "h5": 186,
+    "url": "https://kdd.org/"
+  },
+  {
+    "id": "kr",
+    "name": "KR",
+    "fullName": "International Conference on the Principles of Knowledge Representation and Reasoning",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — International Conference on the Principles of Knowledge Representation and Reasoning.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://kr.org/"
+  },
+  {
+    "id": "natmi",
+    "name": "Nature Machine Intelligence",
+    "fullName": "Nature Machine Intelligence",
+    "kind": "journal",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Premier journal",
+    "esteem": "Extremely high-impact and highly selective — a career-defining placement.",
+    "acceptanceRate": 8,
+    "h5": 100,
+    "url": "https://www.nature.com/natmachintell/"
+  },
+  {
+    "id": "neurips",
+    "name": "NeurIPS",
+    "fullName": "Conference on Neural Information Processing Systems",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "The most prestigious ML conference in the world — CORE A*.",
+    "acceptanceRate": 26,
+    "h5": 337,
+    "url": "https://neurips.cc/"
+  },
+  {
+    "id": "pods",
+    "name": "PODS",
+    "fullName": "ACM SIGMOD-SIGACT-SIGART Conference on Principles of Database Systems",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM SIGMOD-SIGACT-SIGART Conference on Principles of Database Systems.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://dl.acm.org/conference/pods"
+  },
+  {
+    "id": "sigir",
+    "name": "SIGIR",
+    "fullName": "ACM International Conference on Research and Development in Information Retrieval",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM International Conference on Research and Development in Information Retrieval.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://sigir.org/"
+  },
+  {
+    "id": "sigmod",
+    "name": "SIGMOD",
+    "fullName": "ACM Special Interest Group on Management of Data Conference",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM Special Interest Group on Management of Data Conference.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://sigmod.org/"
+  },
+  {
+    "id": "tmlr",
+    "name": "TMLR",
+    "fullName": "Transactions on Machine Learning Research",
+    "kind": "journal",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 4,
+    "tierLabel": "Premier journal",
+    "esteem": "A respected rolling ML journal — faster and more inclusive than JMLR.",
+    "acceptanceRate": 35,
+    "h5": 40,
+    "url": "https://www.jmlr.org/tmlr/"
+  },
+  {
+    "id": "vldb",
+    "name": "VLDB",
+    "fullName": "International Conference on Very Large Databases",
+    "kind": "conference",
+    "field": "Machine Learning",
+    "tags": [
+      "ml"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — International Conference on Very Large Databases.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.vldb.org/"
+  },
+  {
+    "id": "amia",
+    "name": "AMIA",
+    "fullName": "AMIA Annual Symposium",
+    "kind": "conference",
+    "field": "Medical Informatics",
+    "tags": [
+      "ml4h"
+    ],
+    "prestige": 3,
+    "tierLabel": "Strong (specialist)",
+    "esteem": "The main US biomedical-informatics meeting — clinical informatics readers.",
+    "acceptanceRate": 30,
+    "h5": 40,
+    "url": "https://amia.org/education-events/amia-annual-symposium"
+  },
+  {
+    "id": "chil",
+    "name": "CHIL",
+    "fullName": "Conference on Health, Inference, and Learning",
+    "kind": "conference",
+    "field": "Machine Learning for Health",
+    "tags": [
+      "ml4h"
+    ],
+    "prestige": 3,
+    "tierLabel": "Strong (specialist)",
+    "esteem": "The focused home for health-ML — respected and fast-rising in the clinical-AI community.",
+    "acceptanceRate": 30,
+    "h5": 25,
+    "url": "https://www.chilconference.org/"
+  },
+  {
+    "id": "jamia",
+    "name": "JAMIA",
+    "fullName": "Journal of the American Medical Informatics Association",
+    "kind": "journal",
+    "field": "Medical Informatics",
+    "tags": [
+      "ml4h"
+    ],
+    "prestige": 4,
+    "tierLabel": "Premier journal",
+    "esteem": "The leading biomedical-informatics journal — high esteem with clinical readers.",
+    "acceptanceRate": 20,
+    "h5": 100,
+    "url": "https://academic.oup.com/jamia"
+  },
+  {
+    "id": "npjdm",
+    "name": "npj Digital Medicine",
+    "fullName": "npj Digital Medicine (Nature Portfolio)",
+    "kind": "journal",
+    "field": "Medical Informatics",
+    "tags": [
+      "ml4h"
+    ],
+    "prestige": 4,
+    "tierLabel": "Premier journal",
+    "esteem": "A high-impact Nature-portfolio journal for clinical ML and digital health.",
+    "acceptanceRate": 15,
+    "h5": 70,
+    "url": "https://www.nature.com/npjdigitalmed/"
+  },
+  {
+    "id": "acl",
+    "name": "ACL",
+    "fullName": "Annual Meeting of the Association for Computational Linguistics",
+    "kind": "conference",
+    "field": "Natural Language Processing",
+    "tags": [
+      "nlp"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "The flagship NLP conference — CORE A*, top of the field for language work.",
+    "acceptanceRate": 21,
+    "h5": 202,
+    "url": "https://www.aclweb.org/"
+  },
+  {
+    "id": "coling",
+    "name": "COLING",
+    "fullName": "International Conference on Computational Linguistics",
+    "kind": "conference",
+    "field": "Natural Language Processing",
+    "tags": [
+      "nlp"
+    ],
+    "prestige": 3,
+    "tierLabel": "Strong",
+    "esteem": "A long-running computational-linguistics conference — CORE A.",
+    "acceptanceRate": 30,
+    "h5": 70,
+    "url": "https://aclanthology.org/venues/coling/"
+  },
+  {
+    "id": "eacl",
+    "name": "EACL",
+    "fullName": "European Chapter of the ACL",
+    "kind": "conference",
+    "field": "Natural Language Processing",
+    "tags": [
+      "nlp"
+    ],
+    "prestige": 3,
+    "tierLabel": "Strong",
+    "esteem": "The European *ACL meeting — CORE A, a strong regional NLP venue.",
+    "acceptanceRate": 28,
+    "h5": 55,
+    "url": "https://aclanthology.org/venues/eacl/"
+  },
+  {
+    "id": "emnlp",
+    "name": "EMNLP",
+    "fullName": "Conference on Empirical Methods in Natural Language Processing",
+    "kind": "conference",
+    "field": "Natural Language Processing",
+    "tags": [
+      "nlp"
+    ],
+    "prestige": 4,
+    "tierLabel": "Top-tier",
+    "esteem": "Premier empirical-NLP venue — CORE A, close behind ACL.",
+    "acceptanceRate": 23,
+    "h5": 165,
+    "url": "https://aclanthology.org/venues/emnlp/"
+  },
+  {
+    "id": "naacl",
+    "name": "NAACL",
+    "fullName": "Nations of the Americas Chapter of the ACL",
+    "kind": "conference",
+    "field": "Natural Language Processing",
+    "tags": [
+      "nlp"
+    ],
+    "prestige": 4,
+    "tierLabel": "Top-tier",
+    "esteem": "A major *ACL conference — CORE A, just behind ACL and EMNLP.",
+    "acceptanceRate": 23,
+    "h5": 110,
+    "url": "https://aclanthology.org/venues/naacl/"
+  },
+  {
+    "id": "tacl",
+    "name": "TACL",
+    "fullName": "Transactions of the Association for Computational Linguistics",
+    "kind": "journal",
+    "field": "Natural Language Processing",
+    "tags": [
+      "nlp"
+    ],
+    "prestige": 5,
+    "tierLabel": "Premier journal",
+    "esteem": "The ACL's archival journal — CORE A*, often presented at *ACL conferences.",
+    "acceptanceRate": 20,
+    "h5": 80,
+    "url": "https://transacl.org/"
+  },
+  {
+    "id": "ase",
+    "name": "ASE",
+    "fullName": "IEEE/ACM International Conference on Automated Software Engineering",
+    "kind": "conference",
+    "field": "Software Engineering",
+    "tags": [
+      "se"
+    ],
+    "prestige": 4,
+    "tierLabel": "Top-tier",
+    "esteem": "A CSRankings SE venue — CORE A, strong on automation and tools.",
+    "acceptanceRate": 22,
+    "h5": 40,
+    "url": "https://conf.researchr.org/series/ase"
+  },
+  {
+    "id": "cav",
+    "name": "CAV",
+    "fullName": "Computer Aided Verification",
+    "kind": "conference",
+    "field": "Software Engineering",
+    "tags": [
+      "se"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — Computer Aided Verification.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://i-cav.org/"
+  },
+  {
+    "id": "emse",
+    "name": "EMSE",
+    "fullName": "Empirical Software Engineering (Springer)",
+    "kind": "journal",
+    "field": "Software Engineering",
+    "tags": [
+      "se"
+    ],
+    "prestige": 4,
+    "tierLabel": "Premier journal",
+    "esteem": "The top journal for empirical SE — the natural home for rigorous field studies.",
+    "acceptanceRate": 30,
+    "h5": 66,
+    "url": "https://www.springer.com/journal/10664"
+  },
+  {
+    "id": "fse",
+    "name": "FSE",
+    "fullName": "ACM International Conference on the Foundations of Software Engineering",
+    "kind": "conference",
+    "field": "Software Engineering",
+    "tags": [
+      "se"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "Co-flagship with ICSE — CORE A*, equally prestigious.",
+    "acceptanceRate": 22,
+    "h5": 66,
+    "url": "https://conf.researchr.org/series/fse"
+  },
+  {
+    "id": "icse",
+    "name": "ICSE",
+    "fullName": "IEEE/ACM International Conference on Software Engineering",
+    "kind": "conference",
+    "field": "Software Engineering",
+    "tags": [
+      "se"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "The #1 software-engineering conference — CORE A*, the field's flagship.",
+    "acceptanceRate": 20,
+    "h5": 90,
+    "url": "https://conf.researchr.org/series/icse"
+  },
+  {
+    "id": "icsme",
+    "name": "ICSME",
+    "fullName": "IEEE International Conference on Software Maintenance and Evolution",
+    "kind": "conference",
+    "field": "Software Engineering",
+    "tags": [
+      "se"
+    ],
+    "prestige": 3,
+    "tierLabel": "Strong",
+    "esteem": "The main venue for software maintenance and evolution — CORE A.",
+    "acceptanceRate": 28,
+    "h5": 32,
+    "url": "https://conf.researchr.org/series/icsme"
+  },
+  {
+    "id": "issta",
+    "name": "ISSTA",
+    "fullName": "ACM SIGSOFT International Symposium on Software Testing and Analysis",
+    "kind": "conference",
+    "field": "Software Engineering",
+    "tags": [
+      "se"
+    ],
+    "prestige": 4,
+    "tierLabel": "Top-tier",
+    "esteem": "The leading software-testing conference — CORE A, CSRankings SE.",
+    "acceptanceRate": 22,
+    "h5": 38,
+    "url": "https://conf.researchr.org/series/issta"
+  },
+  {
+    "id": "msr",
+    "name": "MSR",
+    "fullName": "International Conference on Mining Software Repositories",
+    "kind": "conference",
+    "field": "Software Engineering",
+    "tags": [
+      "se"
+    ],
+    "prestige": 3,
+    "tierLabel": "Strong",
+    "esteem": "The leading venue for data-driven SE studies — respected, CORE A.",
+    "acceptanceRate": 28,
+    "h5": 55,
+    "url": "https://conf.researchr.org/series/msr"
+  },
+  {
+    "id": "pldi",
+    "name": "PLDI",
+    "fullName": "ACM-SIGPLAN Conference on Programming Language Design and Implementation",
+    "kind": "conference",
+    "field": "Software Engineering",
+    "tags": [
+      "se"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM-SIGPLAN Conference on Programming Language Design and Implementation.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://pldi.org/"
+  },
+  {
+    "id": "popl",
+    "name": "POPL",
+    "fullName": "ACM-SIGACT Symposium on Principles of Programming Languages",
+    "kind": "conference",
+    "field": "Software Engineering",
+    "tags": [
+      "se"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM-SIGACT Symposium on Principles of Programming Languages.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://popl.org/"
+  },
+  {
+    "id": "tosem",
+    "name": "TOSEM",
+    "fullName": "ACM Transactions on Software Engineering and Methodology",
+    "kind": "journal",
+    "field": "Software Engineering",
+    "tags": [
+      "se"
+    ],
+    "prestige": 5,
+    "tierLabel": "Premier journal",
+    "esteem": "A flagship SE journal — CORE A*, alongside TSE for archival work.",
+    "acceptanceRate": 18,
+    "h5": 50,
+    "url": "https://dl.acm.org/journal/tosem"
+  },
+  {
+    "id": "tse",
+    "name": "TSE",
+    "fullName": "IEEE Transactions on Software Engineering",
+    "kind": "journal",
+    "field": "Software Engineering",
+    "tags": [
+      "se"
+    ],
+    "prestige": 5,
+    "tierLabel": "Premier journal",
+    "esteem": "The most prestigious SE journal — the archival gold standard.",
+    "acceptanceRate": 15,
+    "h5": 90,
+    "url": "https://www.computer.org/csdl/journal/ts"
+  },
+  {
+    "id": "ccs",
+    "name": "CCS",
+    "fullName": "ACM Conference on Computer and Communications Security",
+    "kind": "conference",
+    "field": "Security",
+    "tags": [
+      "security"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM Conference on Computer and Communications Security.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.sigsac.org/ccs/"
+  },
+  {
+    "id": "crypto",
+    "name": "CRYPTO",
+    "fullName": "Advances in Cryptology",
+    "kind": "conference",
+    "field": "Security",
+    "tags": [
+      "security"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — Advances in Cryptology.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://iacr.org/meetings/crypto/"
+  },
+  {
+    "id": "eurocrypt",
+    "name": "EuroCrypt",
+    "fullName": "International Conference on the Theory and Application of Cryptographic Techniques",
+    "kind": "conference",
+    "field": "Security",
+    "tags": [
+      "security"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — International Conference on the Theory and Application of Cryptographic Techniques.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://iacr.org/meetings/eurocrypt/"
+  },
+  {
+    "id": "ndss",
+    "name": "NDSS",
+    "fullName": "Usenix Network and Distributed System Security Symposium",
+    "kind": "conference",
+    "field": "Security",
+    "tags": [
+      "security"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — Usenix Network and Distributed System Security Symposium.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.ndss-symposium.org/"
+  },
+  {
+    "id": "oakland",
+    "name": "SP",
+    "fullName": "IEEE Symposium on Security and Privacy",
+    "kind": "conference",
+    "field": "Security",
+    "tags": [
+      "security"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — IEEE Symposium on Security and Privacy.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.ieee-security.org/TC/SP-Index.html"
+  },
+  {
+    "id": "usenixsec",
+    "name": "USENIX Security",
+    "fullName": "Usenix Security Symposium",
+    "kind": "conference",
+    "field": "Security",
+    "tags": [
+      "security"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — Usenix Security Symposium.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.usenix.org/conferences/byname/118"
+  },
+  {
+    "id": "asplos",
+    "name": "ASPLOS",
+    "fullName": "Architectural Support for Programming Languages and Operating Systems",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — Architectural Support for Programming Languages and Operating Systems.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://dl.acm.org/conference/asplos"
+  },
+  {
+    "id": "dac",
+    "name": "DAC",
+    "fullName": "Design Automation Conference",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — Design Automation Conference.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.dac.com/"
+  },
+  {
+    "id": "hpca",
+    "name": "HPCA",
+    "fullName": "International Symposium on High Performance Computer Architecture",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — International Symposium on High Performance Computer Architecture.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://hpca-conf.org/"
+  },
+  {
+    "id": "infocom",
+    "name": "INFOCOM",
+    "fullName": "IEEE International Conference on Computer Communications",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — IEEE International Conference on Computer Communications.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.ieee-infocom.org/"
+  },
+  {
+    "id": "isca",
+    "name": "ISCA",
+    "fullName": "ACM International Symposium on Computer Architecture",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM International Symposium on Computer Architecture.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://dl.acm.org/conference/isca"
+  },
+  {
+    "id": "micro",
+    "name": "MICRO",
+    "fullName": "International Symposium on Microarchitecture",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — International Symposium on Microarchitecture.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://dl.acm.org/conference/micro"
+  },
+  {
+    "id": "mobicom",
+    "name": "MOBICOM",
+    "fullName": "ACM International Conference on Mobile Computing and Networking",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM International Conference on Mobile Computing and Networking.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://dl.acm.org/conference/mobicom"
+  },
+  {
+    "id": "osdi",
+    "name": "OSDI",
+    "fullName": "Usenix Symposium on Operating Systems Design and Implementation",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — Usenix Symposium on Operating Systems Design and Implementation.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.usenix.org/conferences/osdi"
+  },
+  {
+    "id": "podc",
+    "name": "PODC",
+    "fullName": "ACM Symposium on Principles of Distributed Computing",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM Symposium on Principles of Distributed Computing.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.podc.org/"
+  },
+  {
+    "id": "sigcomm",
+    "name": "SIGCOMM",
+    "fullName": "ACM Conference on Applications, Technologies, Architectures, and Protocols for Computer Communication",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM Conference on Applications, Technologies, Architectures, and Protocols for Computer Communication.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.sigcomm.org/"
+  },
+  {
+    "id": "sigmetrics",
+    "name": "SIGMETRICS",
+    "fullName": "Measurement and Modeling of Computer Systems",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — Measurement and Modeling of Computer Systems.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://www.sigmetrics.org/"
+  },
+  {
+    "id": "sosp",
+    "name": "SOSP",
+    "fullName": "ACM SIGOPS Symposium on Operating Systems Principles",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — ACM SIGOPS Symposium on Operating Systems Principles.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://dl.acm.org/conference/sosp"
+  },
+  {
+    "id": "www",
+    "name": "WWW",
+    "fullName": "International World Wide Web Conference",
+    "kind": "conference",
+    "field": "Systems",
+    "tags": [
+      "systems"
+    ],
+    "prestige": 5,
+    "tierLabel": "Flagship venue",
+    "esteem": "ICORE 2026 A* — International World Wide Web Conference.",
+    "acceptanceRate": 22,
+    "h5": 0,
+    "url": "https://dl.acm.org/conference/www"
+  }
+]
