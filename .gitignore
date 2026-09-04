@@ -217,14 +217,10 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-<<<<<<< Updated upstream
-# SQLite library (local + Docker volume)
-data/
+# Runtime SQLite (papers / reviews). Catalog JSON stays tracked.
+data/*
+!data/venues.json
 *.db
-=======
-# Runtime SQLite (papers / reviews)
-data/
 *.db-journal
 *.db-wal
 *.db-shm
->>>>>>> Stashed changes

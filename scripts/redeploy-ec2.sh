@@ -26,11 +26,22 @@ echo "================================================"
 cd ~/ai-paper-reviewer/margin/app
 npm install
 VITE_API_MODE=http VITE_API_BASE_URL= npm run build
+# Drop previous hashed bundles. Stale index.html otherwise keeps the old JS
+# (nginx sends no Cache-Control; browsers heuristic-cache for days).
+sudo mkdir -p /var/www/margin/assets
+sudo find /var/www/margin/assets -name 'index-*.js' -delete
+sudo find /var/www/margin/assets -name 'index-*.css' -delete
 sudo cp -r dist/* /var/www/margin/
+echo "SPA bundle: $(ls dist/assets/index-*.js)"
 # Raise nginx body size (default 1m rejects typical PDFs). Keep in sync
 # with server.py MAX_UPLOAD_BYTES.
 sudo tee /etc/nginx/conf.d/margin-upload.conf >/dev/null <<'EOF'
 client_max_body_size 50M;
+EOF
+# HTML must revalidate. Hashed JS in a cached shell caused n.map crashes.
+sudo tee /etc/nginx/conf.d/margin-cache.conf >/dev/null <<'EOF'
+expires epoch;
+add_header Cache-Control "no-store, no-cache, must-revalidate";
 EOF
 sudo nginx -t && sudo nginx -s reload
 
@@ -66,5 +77,6 @@ for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
   fi
   sleep 2
 done
-echo "status $code failed. docker logs margin" >&2
+echo "status $code failed" >&2
+docker logs margin >&2 || true
 exit 1

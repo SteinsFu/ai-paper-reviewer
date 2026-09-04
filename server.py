@@ -28,6 +28,7 @@ from pydantic import BaseModel
 
 import bundle_builder as bb
 import store
+import venues
 from bedrock_client import HAIKU_4_5
 from novelty_review.src.novelty_review import _parse_manuscript
 from pdf_utils import extract_text
@@ -222,11 +223,34 @@ def get_report(paper_id: str) -> dict[str, Any]:
     return bb.normalize_report(bundle.get("report") or {})
 
 
-@app.get("/paper/{paper_id}/venues")
-def get_venues(paper_id: str) -> list[dict[str, Any]]:
-    if not store.paper_exists(paper_id):
+async def _fresh_venues(paper_id: str) -> dict[str, Any]:
+    bundle = store.get_bundle(paper_id)
+    if bundle is None:
         raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
-    return []  # deferred to Phase 2
+    try:
+        payload = await run_in_threadpool(venues.suggest_for_bundle, bundle)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"{type(exc).__name__}: {exc}",
+        ) from exc
+    stamped = venues.stamp_payload(payload)
+    store.set_venue_suggestions(paper_id, stamped)
+    return venues.public_payload(stamped)
+
+
+@app.get("/paper/{paper_id}/venues")
+async def get_venues(paper_id: str) -> dict[str, Any]:
+    cached = store.get_venue_suggestions(paper_id)
+    if venues.cache_is_current(cached):
+        return venues.public_payload(cached)
+    return await _fresh_venues(paper_id)
+
+
+@app.post("/paper/{paper_id}/venues/refresh")
+async def refresh_venues(paper_id: str) -> dict[str, Any]:
+    """Bypass cache and re-classify this paper. Does not re-run the full review."""
+    return await _fresh_venues(paper_id)
 
 
 @app.delete("/paper/{paper_id}")

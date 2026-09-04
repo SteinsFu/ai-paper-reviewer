@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 import bundle_builder as bb
 import server
 import store
+import venues
 
 
 @pytest.fixture(autouse=True)
@@ -245,9 +246,114 @@ def test_get_paper_coerces_item_tagged_strengths_string(client):
     assert report["strengths"] == body["report"]["strengths"]
 
 
-def test_get_venues_returns_empty_for_valid_paper(client):
+def test_get_venues_classifies_and_ranks(client, monkeypatch):
     server._seed_bundle_for_tests("p_test", _fake_bundle("p_test"))
-    assert client.get("/paper/p_test/venues").json() == []
+    monkeypatch.setattr(venues, "classify_fields", lambda *a, **k: ("se", None))
+    body = client.get("/paper/p_test/venues").json()
+    assert body["primary"] == "se"
+    assert body["secondary"] is None
+    ids = [row["id"] for row in body["venues"]]
+    assert ids[0] == "emse"
+    assert "chi" not in ids
+    assert all(row["deadline"] is None for row in body["venues"])
+    assert "match" in body["venues"][0]
+    assert body["venues"][0]["tag"] == "se"
+    assert "tags" not in body["venues"][0]
+    assert "catalogVersion" not in body
+
+
+def test_get_venues_other_returns_empty_list(client, monkeypatch):
+    server._seed_bundle_for_tests("p_test", _fake_bundle("p_test"))
+    monkeypatch.setattr(venues, "classify_fields", lambda *a, **k: ("other", None))
+    body = client.get("/paper/p_test/venues").json()
+    assert body == {"primary": "other", "secondary": None, "venues": []}
+
+
+def test_get_venues_caches_classifier(client, monkeypatch):
+    calls: list[int] = []
+
+    def fake(*a, **k):
+        calls.append(1)
+        return ("hci", None)
+
+    monkeypatch.setattr(venues, "classify_fields", fake)
+    server._seed_bundle_for_tests("p_test", _fake_bundle("p_test"))
+    assert client.get("/paper/p_test/venues").status_code == 200
+    assert client.get("/paper/p_test/venues").status_code == 200
+    assert calls == [1]
+
+
+def test_get_venues_recaches_when_catalog_version_changes(client, monkeypatch):
+    calls: list[int] = []
+
+    def fake(*a, **k):
+        calls.append(1)
+        return ("hci", None)
+
+    monkeypatch.setattr(venues, "classify_fields", fake)
+    server._seed_bundle_for_tests("p_test", _fake_bundle("p_test"))
+    assert client.get("/paper/p_test/venues").status_code == 200
+    monkeypatch.setattr(venues, "catalog_version", lambda: "catalog-v2")
+    assert client.get("/paper/p_test/venues").status_code == 200
+    assert calls == [1, 1]
+
+
+def test_get_venues_ignores_legacy_cache_without_version(client, monkeypatch):
+    calls: list[int] = []
+
+    def fake(*a, **k):
+        calls.append(1)
+        return ("se", None)
+
+    monkeypatch.setattr(venues, "classify_fields", fake)
+    server._seed_bundle_for_tests("p_test", _fake_bundle("p_test"))
+    store.set_venue_suggestions("p_test", {"primary": "other", "secondary": None, "venues": []})
+    body = client.get("/paper/p_test/venues").json()
+    assert calls == [1]
+    assert body["primary"] == "se"
+    assert body["venues"]
+
+
+def test_reanalyze_busts_venue_cache(client, monkeypatch):
+    calls: list[int] = []
+
+    def fake(*a, **k):
+        calls.append(1)
+        return ("se", None)
+
+    monkeypatch.setattr(venues, "classify_fields", fake)
+    server._seed_bundle_for_tests("p_test", _fake_bundle("p_test"))
+    client.get("/paper/p_test/venues")
+    server._seed_bundle_for_tests("p_test", _fake_bundle("p_test"))
+    client.get("/paper/p_test/venues")
+    assert calls == [1, 1]
+
+
+def test_post_venues_refresh_bypasses_cache(client, monkeypatch):
+    labels = iter([("hci", None), ("se", None)])
+
+    def fake(*a, **k):
+        return next(labels)
+
+    monkeypatch.setattr(venues, "classify_fields", fake)
+    server._seed_bundle_for_tests("p_test", _fake_bundle("p_test"))
+    first = client.get("/paper/p_test/venues").json()
+    cached = client.get("/paper/p_test/venues").json()
+    refreshed = client.post("/paper/p_test/venues/refresh").json()
+    assert first["primary"] == "hci"
+    assert cached["primary"] == "hci"
+    assert refreshed["primary"] == "se"
+    assert refreshed["venues"][0]["tag"] == "se"
+
+
+def test_get_venues_503_when_classifier_fails(client, monkeypatch):
+    server._seed_bundle_for_tests("p_test", _fake_bundle("p_test"))
+    monkeypatch.setattr(
+        venues, "classify_fields",
+        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("bedrock down")),
+    )
+    response = client.get("/paper/p_test/venues")
+    assert response.status_code == 503
 
 
 def test_get_venues_404_for_unknown_paper(client):

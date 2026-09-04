@@ -61,6 +61,12 @@ export function estimateAcceptance(
   return Math.max(3, Math.min(92, Math.round(raw)));
 }
 
+/** How close `paperOverall` sits to this venue's difficulty bar (same formula as venues.py). */
+export function matchScore(venue: PublicationVenue, paperOverall: number): number {
+  const bar = Math.max(50, Math.min(96, 0.55 * (100 - venue.acceptanceRate) + 8 * venue.prestige));
+  return Math.max(0, Math.min(100, Math.round(100 - Math.abs(paperOverall - bar))));
+}
+
 /* p1 — Attention-Guided Summarization (HCI + NLP, human-centered eval) */
 const P1_VENUES: PublicationVenue[] = [
   { id:"chi", name:"CHI", fullName:"ACM CHI Conference on Human Factors in Computing Systems",

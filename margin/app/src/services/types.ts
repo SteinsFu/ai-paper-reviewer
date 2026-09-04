@@ -232,6 +232,7 @@ export interface PipelineStep {
    The per-paper estimated acceptance % is computed from the paper's health,
    the fit, and the venue's selectivity (see data/venues.ts#estimateAcceptance). */
 export type VenueKind = "conference" | "journal" | "workshop";
+export type VenueFieldTag = "hci" | "nlp" | "ml" | "ml4h" | "se" | "haptics" | "cv" | "systems" | "security" | "other";
 
 export interface PublicationVenue {
   id: string;
@@ -252,6 +253,15 @@ export interface PublicationVenue {
   location?: string;            // host city (conferences)
   url: string;                  // official venue page
   rationale: string;            // why it fits this paper
+  /** 0–100 how close the paper's overall score sits to this venue's bar */
+  match?: number;
+  /** catalog field tag for the category badge (cv, nlp, …) */
+  tag?: VenueFieldTag;
+}
+export interface VenueSuggestions {
+  primary: VenueFieldTag;
+  secondary: VenueFieldTag | null;
+  venues: PublicationVenue[];
 }
 
 /* Everything one paper review needs — one bundle, one fetch */
