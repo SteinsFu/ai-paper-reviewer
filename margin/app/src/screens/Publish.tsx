@@ -46,7 +46,7 @@ function chanceColor(v: number): string {
 export function Publish() {
   const { bundle, paperId } = usePaperBundle();
   const { data, loading, error, reload, refreshing, reanalyze } = useVenues(paperId);
-  const venues = data?.venues ?? null;
+  const venues = Array.isArray(data?.venues) ? data.venues : null;
   const primary = data?.primary;
   const secondary = data?.secondary;
   const { resolved, userNotes } = useReviewState(paperId);
