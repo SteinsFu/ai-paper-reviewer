@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, Iterable, Iterator
 
 import boto3
 
@@ -80,3 +80,43 @@ def converse_json(
         if "toolUse" in block:
             return block["toolUse"]["input"]
     raise RuntimeError("Bedrock response did not include a toolUse block.")
+
+
+def converse_stream_text(
+    model_id: str,
+    system_prompt: str,
+    messages: Iterable[dict[str, Any]],
+    *,
+    temperature: float = 0.3,
+    max_tokens: int = 2048,
+    client: Any = None,
+) -> Iterator[str]:
+    """Stream a plain-text reply from Bedrock as an iterator of text deltas.
+
+    ``messages`` is the multi-turn history the caller wants to send; each entry
+    must already be in Bedrock's shape:
+        {"role": "user"|"assistant", "content": [{"text": "..."}]}.
+
+    Yields:
+        Successive text chunks (may span a token to many words). Iteration ends
+        when the stream completes; a ``RuntimeError`` is raised if Bedrock signals
+        a mid-stream error.
+    """
+    client = client or get_client()
+    response = client.converse_stream(
+        modelId=model_id,
+        system=[{"text": system_prompt}],
+        messages=list(messages),
+        inferenceConfig={"temperature": temperature, "maxTokens": max_tokens},
+    )
+    for event in response.get("stream", []):
+        if "contentBlockDelta" in event:
+            delta = event["contentBlockDelta"].get("delta", {})
+            text = delta.get("text")
+            if text:
+                yield text
+        elif "internalServerException" in event or "modelStreamErrorException" in event:
+            key = "internalServerException" if "internalServerException" in event else "modelStreamErrorException"
+            raise RuntimeError(f"Bedrock stream error: {event[key]}")
+        # Other event types (messageStart, contentBlockStart, messageStop, metadata)
+        # are ignored — the caller only needs the text.

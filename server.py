@@ -29,7 +29,7 @@ from pydantic import BaseModel
 import bundle_builder as bb
 import store
 import venues
-from bedrock_client import HAIKU_4_5
+from bedrock_client import HAIKU_4_5, converse_stream_text
 from novelty_review.src.novelty_review import _parse_manuscript
 from pdf_utils import extract_text
 
@@ -268,6 +268,177 @@ def patch_paper(paper_id: str, patch: ArchivePatch) -> list[dict[str, Any]]:
     if not store.set_archived(paper_id, patch.archived):
         raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
     return _library_snapshot()
+
+
+# ---------------------------------------------------------------------------
+# POST /chat — multi-turn conversation grounded in a paper's ReviewBundle
+# ---------------------------------------------------------------------------
+
+
+CHAT_SYSTEM_PROMPT = """You are Margin, an academic peer-review copilot embedded next to a specific paper's structured review.
+
+The user has already received a full review of the paper (summary, category scores, novelty assessment, annotations, and recommendation) — that review is provided below as JSON. Your job is to help them understand, explore, or act on that review through conversation.
+
+Ground rules:
+- Ground every answer in the provided review data. Reference specific annotations, scores, or sections when relevant.
+- If the user asks about something the review does not cover, say so directly rather than inventing content.
+- Be concise. One or two short paragraphs per reply is usually enough; extend only when the user asks for depth.
+- When suggesting rewrites, prefer 2-3 short alternatives over one long one.
+- Do not fabricate citations, prior work, or author intent.
+- If the user asks a purely off-topic question, redirect politely to the review.
+
+Tone: helpful, direct, collegial. Assume the reader is an experienced researcher or a graduate student."""
+
+
+def _build_chat_context(bundle: dict[str, Any]) -> str:
+    """Serialize a ReviewBundle into a compact system-prompt appendix.
+
+    We intentionally omit the full manuscript text (would blow the token budget
+    for a chat exchange) and the reference list (also large; rarely needed for
+    conversational follow-ups).
+    """
+    paper = bundle.get("paper") or {}
+    scores = bundle.get("scores") or {}
+    report = bundle.get("report") or {}
+    novelty = bundle.get("novelty") or {}
+    annotations = bundle.get("annotations") or []
+    missing_refs = bundle.get("missingRefs") or []
+
+    lines: list[str] = []
+    lines.append("=== PAPER ===")
+    lines.append(f"Title: {paper.get('title', 'Untitled')}")
+    if paper.get("authors"):
+        lines.append(f"Authors: {paper['authors']}")
+    lines.append(
+        f"Pages: {paper.get('pages', '?')}  "
+        f"Words: {paper.get('words', '?')}  "
+        f"Refs: {paper.get('refs', '?')}  "
+        f"Overall: {paper.get('overall', '?')}/100  "
+        f"Recommendation: {paper.get('recommendation', '?')}"
+    )
+
+    if scores:
+        lines.append("")
+        lines.append("=== CATEGORY SCORES (0-100) ===")
+        for cat in ("writing", "structure", "method", "logic", "novelty", "citation", "format"):
+            if cat in scores:
+                lines.append(f"  {cat:<10} {scores[cat]}")
+
+    if report:
+        lines.append("")
+        lines.append("=== REPORT ===")
+        if report.get("summary"):
+            lines.append(f"Summary: {report['summary']}")
+        for key in ("strengths", "weaknesses", "minor"):
+            items = report.get(key) or []
+            if items:
+                lines.append(f"{key.title()}:")
+                for it in items:
+                    lines.append(f"  - {it}")
+        if report.get("confidence") is not None:
+            lines.append(f"Reviewer confidence: {report['confidence']}/5")
+
+    if novelty:
+        lines.append("")
+        lines.append("=== NOVELTY ===")
+        if novelty.get("verdict"):
+            lines.append(f"Verdict: {novelty['verdict']} (score {novelty.get('score', '?')}/100)")
+        if novelty.get("summary"):
+            lines.append(f"Summary: {novelty['summary']}")
+        for key in ("strengths", "risks"):
+            items = novelty.get(key) or []
+            if items:
+                lines.append(f"{key.title()}:")
+                for it in items:
+                    lines.append(f"  - {it}")
+
+    if annotations:
+        lines.append("")
+        lines.append(f"=== ANNOTATIONS ({len(annotations)} total) ===")
+        # Keep annotations compact — the LLM will ask for detail if it needs it.
+        for a in annotations[:40]:  # cap to keep the prompt bounded
+            lines.append(
+                f"  [{a.get('id', '?')}] {a.get('sev', '?')}/{a.get('cat', '?')} "
+                f"({a.get('section', '?')}): {a.get('title', '')}"
+            )
+            if a.get("comment"):
+                lines.append(f"      {a['comment']}")
+
+    if missing_refs:
+        lines.append("")
+        lines.append(f"=== MISSING CITATIONS ({len(missing_refs)}) ===")
+        for m in missing_refs[:20]:
+            lines.append(f"  - {m.get('text', '')} ({m.get('reason', '')[:80]})")
+
+    return "\n".join(lines)
+
+
+def _to_bedrock_messages(messages: list[dict[str, str]]) -> list[dict[str, Any]]:
+    """Convert our simple chat schema to Bedrock's content-block shape."""
+    out: list[dict[str, Any]] = []
+    for m in messages:
+        role = m.get("role")
+        content = (m.get("content") or "").strip()
+        if role not in ("user", "assistant") or not content:
+            continue
+        out.append({"role": role, "content": [{"text": content}]})
+    return out
+
+
+class ChatMessageIn(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    paperId: str
+    messages: list[ChatMessageIn]
+    model: str | None = None
+
+
+async def _stream_chat(bundle: dict[str, Any], messages: list[dict[str, Any]], model_id: str):
+    """Yield SSE frames of {"delta": "..."} for the streaming reply."""
+    context = _build_chat_context(bundle)
+    system_prompt = f"{CHAT_SYSTEM_PROMPT}\n\n{context}"
+
+    def iterate_stream() -> list[str]:
+        return list(converse_stream_text(
+            model_id=model_id,
+            system_prompt=system_prompt,
+            messages=messages,
+            temperature=0.4,
+            max_tokens=1024,
+        ))
+
+    try:
+        # boto3's iterator blocks on each event; run the whole collection in a
+        # threadpool. This gives up token-by-token client streaming, so we
+        # flush partial chunks in a second pass to keep the UI responsive.
+        chunks = await run_in_threadpool(iterate_stream)
+        for chunk in chunks:
+            yield _sse({"delta": chunk})
+        yield _sse({"done": True})
+    except Exception as exc:
+        yield _sse({"error": f"{type(exc).__name__}: {exc}", "done": True})
+
+
+@app.post("/chat")
+async def chat(req: ChatRequest) -> StreamingResponse:
+    """Multi-turn chat grounded in a paper's ReviewBundle. Streams SSE deltas."""
+    bundle = store.get_bundle(req.paperId)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail=f"paper {req.paperId!r} not found")
+
+    bedrock_messages = _to_bedrock_messages([m.model_dump() for m in req.messages])
+    if not bedrock_messages or bedrock_messages[-1]["role"] != "user":
+        raise HTTPException(status_code=400, detail="messages must end with a user turn")
+
+    model_id = req.model or HAIKU_4_5
+    return StreamingResponse(
+        _stream_chat(bundle, bedrock_messages, model_id),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ---------------------------------------------------------------------------
