@@ -9,11 +9,11 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import type { ReactNode } from "react";
 import type { ReviewBundle } from "../services/types";
 
-export type UserRole = "student" | "professor";
 export interface Account {
   email: string;
-  role: UserRole;
-  name?: string;
+  name: string;
+  /** legacy field kept only so older localStorage payloads still parse. */
+  role?: string;
 }
 
 interface AppState {
@@ -46,7 +46,14 @@ function loadAccount(): Account | null {
     const raw = localStorage.getItem(AUTH_KEY);
     if (!raw) return null;
     const a = JSON.parse(raw) as Account;
-    if (a && typeof a.email === "string" && (a.role === "student" || a.role === "professor")) return a;
+    if (a && typeof a.email === "string" && a.email.length > 0) {
+      // Legacy accounts predate the required `name` field — fall back to the
+      // email's local-part so the account stays usable without a re-signin.
+      const name = typeof a.name === "string" && a.name.trim().length > 0
+        ? a.name
+        : a.email.split("@")[0];
+      return { email: a.email, name };
+    }
   } catch { /* ignore */ }
   return null;
 }

@@ -4,24 +4,54 @@
    this repo's root (server.py). Base URL is taken from
    VITE_API_BASE_URL (default http://localhost:8000).
    ============================================================ */
-import type { MarginApi } from "./api";
+import type { CreateNoteInput, MarginApi } from "./api";
 import type {
-  AnalyzeInput, AnalyzeProgress, LibraryPaper, ReviewBundle, ReviewReport, VenueSuggestions,
+  AnalyzeInput, AnalyzeProgress, LibraryPaper, Note, ReviewBundle, ReviewReport, VenueSuggestions,
 } from "./types";
 
 const BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ??
   "http://localhost:8000";
 
+const AUTH_KEY = "margin-auth";
+
+/** Load the current user's identity from localStorage.
+    Kept lightweight so httpApi doesn't have to import AppState. */
+function currentIdentity(): { id: string; name: string } {
+  try {
+    const raw = localStorage.getItem(AUTH_KEY);
+    if (!raw) return { id: "", name: "" };
+    const acc = JSON.parse(raw) as { email?: string; name?: string };
+    const id = (acc.email ?? "").trim();
+    const name = ((acc.name ?? "").trim()) || id.split("@")[0] || "";
+    return { id, name };
+  } catch {
+    return { id: "", name: "" };
+  }
+}
+
+/** Compose auth-identity headers for every request.
+    Anonymous users still work — server accepts empty strings. */
+function identityHeaders(): HeadersInit {
+  const { id, name } = currentIdentity();
+  const h: Record<string, string> = {};
+  if (id) h["X-User-Id"] = id;
+  if (name) h["X-User-Name"] = name;
+  return h;
+}
+
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-  });
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...identityHeaders(),
+    ...(init?.headers ?? {}),
+  };
+  const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
   if (!res.ok) {
     const detail = await res.text().catch(() => res.statusText);
     throw new Error(`${res.status} ${res.statusText}: ${detail}`);
   }
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
@@ -63,7 +93,11 @@ async function* analyze(input: AnalyzeInput): AsyncIterable<AnalyzeProgress> {
     fd.append("file", blob, "untitled.txt");
   }
 
-  const res = await fetch(`${BASE_URL}/analyze`, { method: "POST", body: fd });
+  const res = await fetch(`${BASE_URL}/analyze`, {
+    method: "POST",
+    body: fd,
+    headers: identityHeaders(),
+  });
   if (!res.ok) {
     const detail = await res.text().catch(() => res.statusText);
     throw new Error(`${res.status} ${res.statusText}: ${detail}`);
@@ -112,5 +146,36 @@ export const httpApi: MarginApi = {
     json<LibraryPaper[]>(`/paper/${encodeURIComponent(paperId)}`, {
       method: "PATCH",
       body: JSON.stringify({ archived }),
+    }),
+
+  /* ---- Notes / comments -------------------------------------------- */
+
+  listNotes: (paperId) => json<Note[]>(`/paper/${encodeURIComponent(paperId)}/notes`),
+
+  createNote: (paperId, input: CreateNoteInput) =>
+    json<Note>(`/paper/${encodeURIComponent(paperId)}/notes`, {
+      method: "POST",
+      body: JSON.stringify({
+        body: input.body,
+        parentNoteId: input.parentNoteId ?? null,
+        anchor: input.anchor ?? null,
+      }),
+    }),
+
+  updateNote: (paperId, noteId, body) =>
+    json<Note>(`/paper/${encodeURIComponent(paperId)}/notes/${encodeURIComponent(noteId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ body }),
+    }),
+
+  deleteNote: (paperId, noteId) =>
+    json<void>(`/paper/${encodeURIComponent(paperId)}/notes/${encodeURIComponent(noteId)}`, {
+      method: "DELETE",
+    }),
+
+  markNotesRead: (paperId) =>
+    json<void>(`/paper/${encodeURIComponent(paperId)}/notes/mark-read`, {
+      method: "POST",
+      body: "{}",
     }),
 };

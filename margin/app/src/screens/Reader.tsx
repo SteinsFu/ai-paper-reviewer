@@ -10,6 +10,8 @@ import { NoteComposer } from "../components/NoteComposer";
 import type { NoteDraft } from "../components/NoteComposer";
 import { FigurePlot } from "../components/FigurePlot";
 import { Segmented } from "../components/Segmented";
+import { CommentsPanel } from "../components/CommentsPanel";
+import { useNotes } from "../hooks/useNotes";
 import { usePaperBundle } from "./PaperLayout";
 import { useReviewState } from "../hooks/useReview";
 import { CATEGORIES, CAT_ORDER, SEVERITY } from "../data/mock";
@@ -50,6 +52,18 @@ export function Reader() {
   const [composer, setComposer] = useState<NoteDraft | null>(null);
   const [flashBlock, setFlashBlock] = useState<number | null>(null);
   const [railOpen, setRailOpen] = useState(false); // narrow-viewport rail drawer
+  // reader-rail tab: AI-generated review notes vs. user-authored comments
+  const [railTab, setRailTab] = useState<"notes" | "comments">("notes");
+  // Anchor to seed the CommentsPanel composer when the user picks "Comment on
+  // this passage" from the selection fab. Cleared when the panel consumes it.
+  const [pendingCommentAnchor, setPendingCommentAnchor] = useState<
+    { blockIndex: number; start: number; end: number; quote: string; section: string } | null
+  >(null);
+  // Fetch notes count for the tab badge. CommentsPanel keeps its own hook —
+  // both cache instances will refresh independently after mutations, which is
+  // fine for our purposes (mismatch is bounded to one paper's comments).
+  const { notes: paperComments } = useNotes(paperId);
+  const commentsCount = paperComments.length;
 
   const docRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
@@ -144,6 +158,27 @@ export function Reader() {
     });
     setPending(null);
     window.getSelection()?.removeAllRanges();
+  }
+
+  function openCommentFromSelection() {
+    if (!pending) return;
+    setPendingCommentAnchor({
+      blockIndex: pending.blockIndex, start: pending.start, end: pending.end,
+      quote: pending.quote, section: pending.section,
+    });
+    setRailTab("comments");
+    setPending(null);
+    window.getSelection()?.removeAllRanges();
+  }
+
+  function scrollToAnchor(anchor: { blockIndex: number; start: number; end: number }) {
+    const cont = docRef.current;
+    if (!cont) return;
+    const block = cont.querySelector<HTMLElement>(`[data-block="${anchor.blockIndex}"]`);
+    if (!block) return;
+    cont.scrollTo({ top: block.offsetTop - cont.clientHeight * 0.34, behavior:"smooth" });
+    setFlashBlock(anchor.blockIndex);
+    window.setTimeout(() => setFlashBlock(null), 1400);
   }
 
   function saveNote(fields: { cat: CategoryId; sev: SeverityId; title: string; comment: string }) {
@@ -314,7 +349,8 @@ export function Reader() {
                 })}
               </div>
             </div>
-            <div style={{ flex:"0 0 auto" }}>
+            <div style={{ flex:"0 0 auto", display:"flex", gap:8, alignItems:"center" }}>
+              <ShareMenu paperId={paperId}/>
               <Segmented id="reader-view" value={view} onChange={setView} options={[
                 { value:"reading", label:"Reading" },
                 { value:"paper", label:"Paper" },
@@ -358,55 +394,104 @@ export function Reader() {
       <div className={"reader-rail" + (railOpen ? " open" : "")}
         style={{ borderLeft:"1px solid var(--line-2)",
         display:"flex", flexDirection:"column", background:"var(--surface-2)" }}>
-        <div style={{ padding:"16px 18px 13px", borderBottom:"1px solid var(--line-2)",
+        <div style={{ padding:"12px 14px 10px", borderBottom:"1px solid var(--line-2)",
           background:"var(--frost-rail)", backdropFilter:"blur(12px)" }}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <h2 style={{ fontSize:16, fontWeight:700, margin:0, letterSpacing:"-0.02em" }}>Reviewer notes</h2>
-              <span className="chip num" style={{ height:21, fontSize:11.5, background:"var(--accent-soft)",
-                color:"var(--accent-press)" }}>{openCount} open</span>
-            </div>
-            <button className="btn btn-sm" onClick={() => navigate(`/paper/${paperId}/report`)}>
-              <Icon name="report" size={15}/> Report
+          {/* Rail tab switcher — AI review notes vs. user-authored comments. */}
+          <div style={{ display:"flex", gap:4, marginBottom:railTab === "notes" ? 12 : 0 }}>
+            <button
+              onClick={() => setRailTab("notes")}
+              className={"seg-tab" + (railTab === "notes" ? " on" : "")}
+              style={{
+                flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                padding:"7px 10px", border:"1px solid var(--line-2)", borderRadius:8,
+                background: railTab === "notes" ? "var(--surface)" : "transparent",
+                color: railTab === "notes" ? "var(--text)" : "var(--text-3)",
+                fontSize:13, fontWeight:600, cursor:"pointer",
+                boxShadow: railTab === "notes" ? "var(--sh-sm)" : "none",
+              }}
+              aria-pressed={railTab === "notes"}>
+              <Icon name="spark" size={13} fill={railTab === "notes"}/> AI review
+              <span className="num" style={{ fontSize:11, opacity:0.8 }}>{openCount}</span>
+            </button>
+            <button
+              onClick={() => setRailTab("comments")}
+              className={"seg-tab" + (railTab === "comments" ? " on" : "")}
+              style={{
+                flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                padding:"7px 10px", border:"1px solid var(--line-2)", borderRadius:8,
+                background: railTab === "comments" ? "var(--surface)" : "transparent",
+                color: railTab === "comments" ? "var(--text)" : "var(--text-3)",
+                fontSize:13, fontWeight:600, cursor:"pointer",
+                boxShadow: railTab === "comments" ? "var(--sh-sm)" : "none",
+              }}
+              aria-pressed={railTab === "comments"}>
+              <Icon name="chat" size={13}/> Comments
+              {commentsCount > 0 && (
+                <span className="num" style={{ fontSize:11, opacity:0.8 }}>{commentsCount}</span>
+              )}
             </button>
           </div>
-          {/* progress strip */}
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:11 }}>
-            <ScoreBar value={(resolvedCount / total) * 100} color="var(--ok)"/>
-            <span className="num" style={{ fontSize:11.5, fontWeight:600, color:"var(--text-3)",
-              whiteSpace:"nowrap" }}>{resolvedCount} of {total} resolved</span>
-          </div>
-          {catFilter !== "all" && (
-            <button onClick={() => setCatFilter("all")} style={{ marginTop:10, border:"none",
-              background:"transparent", color:"var(--accent-press)", fontSize:12.5, fontWeight:600,
-              cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}>
-              <Icon name="close" size={13}/> Clear filter · {CATEGORIES[catFilter].label}
-            </button>
+
+          {railTab === "notes" && (
+            <>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <h2 style={{ fontSize:15.5, fontWeight:700, margin:0, letterSpacing:"-0.02em" }}>Reviewer notes</h2>
+                  <span className="chip num" style={{ height:21, fontSize:11.5, background:"var(--accent-soft)",
+                    color:"var(--accent-press)" }}>{openCount} open</span>
+                </div>
+                <button className="btn btn-sm" onClick={() => navigate(`/paper/${paperId}/report`)}>
+                  <Icon name="report" size={15}/> Report
+                </button>
+              </div>
+              {/* progress strip */}
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:9 }}>
+                <ScoreBar value={(resolvedCount / total) * 100} color="var(--ok)"/>
+                <span className="num" style={{ fontSize:11.5, fontWeight:600, color:"var(--text-3)",
+                  whiteSpace:"nowrap" }}>{resolvedCount} of {total} resolved</span>
+              </div>
+              {catFilter !== "all" && (
+                <button onClick={() => setCatFilter("all")} style={{ marginTop:10, border:"none",
+                  background:"transparent", color:"var(--accent-press)", fontSize:12.5, fontWeight:600,
+                  cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}>
+                  <Icon name="close" size={13}/> Clear filter · {CATEGORIES[catFilter].label}
+                </button>
+              )}
+            </>
           )}
         </div>
 
-        <div ref={railRef} className="scroll" style={{ flex:1, minHeight:0, padding:"12px 14px 60px" }}>
-          {sortedVisible.length === 0 && (
-            <div style={{ textAlign:"center", color:"var(--text-3)", padding:"50px 20px", fontSize:14 }}>
-              No notes in this category.
-            </div>
-          )}
-          {sortedVisible.map((an) => (
-            <NoteCard key={an.id} an={an}
-              refCb={(el) => { cardRefs.current[an.id] = el; }}
-              n={markerIndex[an.id]}
-              isSel={selected === an.id}
-              isDone={!!resolved[an.id]}
-              isApplied={!!applied[an.id]}
-              onSelect={() => selectAnno(an.id, "rail")}
-              onApply={() => applyFix(an.id)}
-              onToggle={() => toggleResolved(an.id)}
-              onDetails={() => navigate(`/paper/${paperId}/novelty`)}
-              onEdit={() => editNote(an)}
-              onDelete={() => { deleteNote(an.id); if (selected === an.id) setSelected(null); }}
-            />
-          ))}
-        </div>
+        {railTab === "notes" ? (
+          <div ref={railRef} className="scroll" style={{ flex:1, minHeight:0, padding:"12px 14px 60px" }}>
+            {sortedVisible.length === 0 && (
+              <div style={{ textAlign:"center", color:"var(--text-3)", padding:"50px 20px", fontSize:14 }}>
+                No notes in this category.
+              </div>
+            )}
+            {sortedVisible.map((an) => (
+              <NoteCard key={an.id} an={an}
+                refCb={(el) => { cardRefs.current[an.id] = el; }}
+                n={markerIndex[an.id]}
+                isSel={selected === an.id}
+                isDone={!!resolved[an.id]}
+                isApplied={!!applied[an.id]}
+                onSelect={() => selectAnno(an.id, "rail")}
+                onApply={() => applyFix(an.id)}
+                onToggle={() => toggleResolved(an.id)}
+                onDetails={() => navigate(`/paper/${paperId}/novelty`)}
+                onEdit={() => editNote(an)}
+                onDelete={() => { deleteNote(an.id); if (selected === an.id) setSelected(null); }}
+              />
+            ))}
+          </div>
+        ) : (
+          <CommentsPanel
+            paperId={paperId}
+            pendingAnchor={pendingCommentAnchor}
+            onPendingAnchorConsumed={() => setPendingCommentAnchor(null)}
+            onNavigateAnchor={scrollToAnchor}
+          />
+        )}
       </div>
 
       {/* rail toggle — only visible on narrow viewports (CSS) */}
@@ -415,19 +500,25 @@ export function Reader() {
         {railOpen ? "Close" : `Notes${openCount ? ` · ${openCount}` : ""}`}
       </button>
 
-      {/* floating "Add note" affordance shown over a fresh text selection */}
+      {/* floating action bar shown over a fresh text selection */}
       <AnimatePresence>
         {pending && (
-          <motion.button className="add-note-fab btn btn-primary btn-sm"
+          <motion.div className="add-note-fab"
             initial={{ opacity:0, y:6, scale:0.9 }} animate={{ opacity:1, y:0, scale:1 }}
             exit={{ opacity:0, y:6, scale:0.9 }}
             transition={{ type:"spring", stiffness:520, damping:30 }}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={openComposerFromSelection}
             style={{ position:"fixed", left: pending.x, top: pending.y - 46,
-              transform:"translateX(-50%)", zIndex:60, boxShadow:"var(--sh-lg)", whiteSpace:"nowrap" }}>
-            <Icon name="pen" size={14}/> Add note
-          </motion.button>
+              transform:"translateX(-50%)", zIndex:60, boxShadow:"var(--sh-lg)",
+              display:"flex", gap:4, padding:3, borderRadius:10,
+              background:"var(--surface)", border:"1px solid var(--line)", whiteSpace:"nowrap" }}>
+            <button className="btn btn-sm btn-primary" onClick={openComposerFromSelection}>
+              <Icon name="pen" size={14}/> Add note
+            </button>
+            <button className="btn btn-sm" onClick={openCommentFromSelection}>
+              <Icon name="chat" size={14}/> Comment
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -632,6 +723,79 @@ function References({ refs, span }: { refs?: Reference[]; span?: boolean }) {
           <li key={r.id} style={{ marginBottom: 6, breakInside: "avoid", paddingLeft: 2 }}>{r.text}</li>
         ))}
       </ol>
+    </div>
+  );
+}
+
+/** Small button next to the reader header that reveals two copy actions:
+    the paper's deep-link URL (for sending in Slack / email) and its bare
+    id (for pasting into the Dashboard "Open by id" field). */
+function ShareMenu({ paperId }: { paperId: string }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState<"url" | "id" | null>(null);
+
+  const shareUrl = `${window.location.origin}/paper/${paperId}/reader`;
+
+  async function copy(text: string, which: "url" | "id") {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(which);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      // fall back to the legacy execCommand path
+      const ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); setCopied(which); setTimeout(() => setCopied(null), 1500); }
+      finally { document.body.removeChild(ta); }
+    }
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest?.(".share-menu")) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  return (
+    <div className="share-menu" style={{ position:"relative" }}>
+      <button className="btn btn-sm" onClick={() => setOpen((o) => !o)} title="Share this paper">
+        <Icon name="link" size={14}/> Share
+      </button>
+      {open && (
+        <div style={{ position:"absolute", right:0, top:"calc(100% + 6px)", zIndex:40,
+          minWidth:280, padding:10, borderRadius:10, background:"var(--surface)",
+          border:"1px solid var(--line)", boxShadow:"var(--sh-lg)" }}>
+          <div style={{ fontSize:11, color:"var(--text-3)", marginBottom:6, letterSpacing:0.4,
+            textTransform:"uppercase", fontWeight:600 }}>
+            Copy to share
+          </div>
+          <button
+            className="btn btn-sm"
+            onClick={() => void copy(shareUrl, "url")}
+            style={{ width:"100%", justifyContent:"space-between", marginBottom:6 }}>
+            <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <Icon name="link" size={13}/> Copy URL
+            </span>
+            {copied === "url"
+              ? <span style={{ color:"var(--ok)", fontSize:12, fontWeight:600 }}>Copied</span>
+              : <span style={{ color:"var(--text-4)", fontSize:11 }}>full link</span>}
+          </button>
+          <button
+            className="btn btn-sm"
+            onClick={() => void copy(paperId, "id")}
+            style={{ width:"100%", justifyContent:"space-between" }}>
+            <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <Icon name="doc" size={13}/> Copy ID
+              <code style={{ fontSize:11, color:"var(--text-3)", background:"var(--surface-3)",
+                padding:"1px 5px", borderRadius:4 }}>{paperId}</code>
+            </span>
+            {copied === "id" && <span style={{ color:"var(--ok)", fontSize:12, fontWeight:600 }}>Copied</span>}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

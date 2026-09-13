@@ -34,6 +34,15 @@ function greeting(): string {
   return "Good evening";
 }
 
+/** Accept either a full paper URL or a bare `p_xxxxxxxx` id. Returns the
+    normalised paper id, or `null` if the input doesn't look like one. */
+function parsePaperId(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const m = trimmed.match(/(p_[a-z0-9]+)/i);
+  return m ? m[1] : null;
+}
+
 export function Dashboard() {
   const { data: lib, loading, error, reload, remove, setArchived } = useLibrary();
   const { currentPaperId, setCurrentPaper, account } = useAppState();
@@ -41,7 +50,21 @@ export function Dashboard() {
   const [params, setParams] = useSearchParams();
   const filter = paramToFilter(params.get("view"));
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState("");
+  const [openErr, setOpenErr] = useState("");
   const navigate = useNavigate();
+
+  function submitOpen(e: React.FormEvent) {
+    e.preventDefault();
+    const id = parsePaperId(openId);
+    if (!id) {
+      setOpenErr("Paste a paper URL or an id like p_1a2b3c4d.");
+      return;
+    }
+    setOpenErr("");
+    setOpenId("");
+    navigate(`/paper/${id}/reader`);
+  }
 
   const changeFilter = (f: Filter) =>
     setParams(f === "all" ? {} : { view: f }, { replace: true });
@@ -126,6 +149,31 @@ export function Dashboard() {
           </button>
         </div>
 
+        {/* Open a paper by ID or URL — how a reviewer joins someone else's paper */}
+        <form onSubmit={submitOpen}
+          style={{ display:"flex", gap:8, alignItems:"stretch", marginBottom:24 }}>
+          <div style={{ position:"relative", flex:1 }}>
+            <Icon name="search" size={15}
+              style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)",
+                color:"var(--text-4)", pointerEvents:"none" }}/>
+            <input
+              className={"input" + (openErr ? " err" : "")}
+              type="text"
+              value={openId}
+              onChange={(e) => { setOpenId(e.target.value); if (openErr) setOpenErr(""); }}
+              placeholder="Open a paper by URL or id (e.g. p_1a2b3c4d5e)"
+              style={{ paddingLeft:34, height:38 }}
+              aria-label="Paper URL or id"/>
+          </div>
+          <button type="submit" className="btn" disabled={!openId.trim()}
+            style={{ opacity: openId.trim() ? 1 : 0.5 }}>
+            Open
+          </button>
+        </form>
+        {openErr && (
+          <div className="field-err" style={{ marginTop:-16, marginBottom:16 }}>{openErr}</div>
+        )}
+
         {/* Stat cards */}
         <div className="stat-grid" style={{ marginBottom:30 }}>
           {stats.map((s, i) => (
@@ -199,6 +247,21 @@ export function Dashboard() {
                 <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:3 }}>
                   <span style={{ fontSize:15, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden",
                     textOverflow:"ellipsis", maxWidth:380 }}>{p.title}</span>
+                  {(p.unreadNotes ?? 0) > 0 && (
+                    <span
+                      aria-label={`${p.unreadNotes} unread comment${p.unreadNotes === 1 ? "" : "s"}`}
+                      title={`${p.unreadNotes} unread comment${p.unreadNotes === 1 ? "" : "s"}`}
+                      className="num"
+                      style={{
+                        display:"inline-flex", alignItems:"center", justifyContent:"center",
+                        minWidth:20, height:20, padding:"0 6px", borderRadius:999,
+                        fontSize:11, fontWeight:700, lineHeight:1,
+                        background:"var(--critical, #dc2626)", color:"#fff",
+                        boxShadow:"var(--sh-sm)",
+                      }}>
+                      {p.unreadNotes! > 99 ? "99+" : p.unreadNotes}
+                    </span>
+                  )}
                   {isCurrent && <span style={{ fontSize:11, fontWeight:700, color:"var(--accent-press)" }}>· current</span>}
                 </div>
                 <div style={{ fontSize:12.5, color:"var(--text-3)" }}>

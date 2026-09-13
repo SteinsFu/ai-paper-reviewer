@@ -17,14 +17,14 @@ import asyncio
 import json
 import os
 import uuid
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import FastAPI, Header, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import bundle_builder as bb
 import store
@@ -50,16 +50,36 @@ app.add_middleware(
     allow_origins=_ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
-def _library_snapshot() -> list[dict[str, Any]]:
-    return store.list_papers()
+# ---------------------------------------------------------------------------
+# Identity — mock auth: client sends X-User-Id and X-User-Name headers.
+# ---------------------------------------------------------------------------
 
 
-def _register_bundle(paper_id: str, bundle: dict[str, Any]) -> dict[str, Any]:
+def _identity(
+    x_user_id: str | None,
+    x_user_name: str | None,
+) -> tuple[str, str]:
+    """Read the requesting user's identity from headers. Empty string if
+    missing — the routes decide whether to accept anonymous callers."""
+    return (x_user_id or "").strip(), (x_user_name or "").strip()
+
+
+def _library_snapshot(user_id: str = "") -> list[dict[str, Any]]:
+    return store.list_papers(user_id=user_id)
+
+
+def _register_bundle(
+    paper_id: str,
+    bundle: dict[str, Any],
+    owner_id: str = "",
+    owner_name: str = "",
+) -> dict[str, Any]:
     """Add or replace a bundle and its library-list entry. Returns the entry."""
-    return store.upsert_bundle(paper_id, bundle)
+    return store.upsert_bundle(paper_id, bundle, owner_id=owner_id, owner_name=owner_name)
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +119,14 @@ def _sse(payload: dict[str, Any]) -> bytes:
 # ---------------------------------------------------------------------------
 
 
-async def _run_pipeline(paper_text: str, pdf_bytes: bytes | None, model: str, venue: str):
+async def _run_pipeline(
+    paper_text: str,
+    pdf_bytes: bytes | None,
+    model: str,
+    venue: str,
+    owner_id: str = "",
+    owner_name: str = "",
+):
     """Async generator that runs the 6-step pipeline and yields SSE frames.
 
     Each Bedrock helper runs in the FastAPI threadpool so we don't block the
@@ -158,7 +185,7 @@ async def _run_pipeline(paper_text: str, pdf_bytes: bytes | None, model: str, ve
             "references": references,
         })
         paper_id = bb.stable_paper_id(paper_text)
-        _register_bundle(paper_id, bundle)
+        store.upsert_bundle(paper_id, bundle, owner_id=owner_id, owner_name=owner_name)
 
         yield _sse(_progress_payload(len(PIPELINE_STEPS), done=True, paper_id=paper_id))
     except Exception as exc:  # surface errors as an SSE error frame the client can render
@@ -172,8 +199,18 @@ async def _run_pipeline(paper_text: str, pdf_bytes: bytes | None, model: str, ve
 
 
 @app.post("/analyze")
-async def analyze(file: UploadFile, venue: str = "", model: str = HAIKU_4_5):
-    """Accept a PDF/txt/md upload; stream AnalyzeProgress events via SSE."""
+async def analyze(
+    file: UploadFile,
+    venue: str = "",
+    model: str = HAIKU_4_5,
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+    x_user_name: str | None = Header(default=None, alias="X-User-Name"),
+):
+    """Accept a PDF/txt/md upload; stream AnalyzeProgress events via SSE.
+
+    The requesting user's identity (X-User-Id, X-User-Name headers) is
+    recorded as the paper's owner. Anonymous uploads (no headers) still work.
+    """
     filename = file.filename or "upload"
     data = await file.read()
     if len(data) > MAX_UPLOAD_BYTES:
@@ -189,9 +226,10 @@ async def analyze(file: UploadFile, venue: str = "", model: str = HAIKU_4_5):
     if not paper_text.strip():
         raise HTTPException(status_code=400, detail="Could not extract any text from the upload.")
 
+    owner_id, owner_name = _identity(x_user_id, x_user_name)
     pdf_bytes = data if filename.lower().endswith(".pdf") else None
     return StreamingResponse(
-        _run_pipeline(paper_text, pdf_bytes, model, venue),
+        _run_pipeline(paper_text, pdf_bytes, model, venue, owner_id, owner_name),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -203,15 +241,27 @@ async def analyze(file: UploadFile, venue: str = "", model: str = HAIKU_4_5):
 
 
 @app.get("/library")
-def library() -> list[dict[str, Any]]:
-    return _library_snapshot()
+def library(
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+) -> list[dict[str, Any]]:
+    user_id, _ = _identity(x_user_id, None)
+    return store.list_papers(user_id=user_id)
 
 
 @app.get("/paper/{paper_id}")
-def get_paper(paper_id: str) -> dict[str, Any]:
+def get_paper(
+    paper_id: str,
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+) -> dict[str, Any]:
     bundle = store.get_bundle(paper_id)
     if bundle is None:
         raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
+    # Anyone who opens a paper by id is added to their personal watch list, so
+    # it shows up on their Dashboard alongside their own uploads. Anonymous
+    # callers are ignored.
+    user_id, _ = _identity(x_user_id, None)
+    if user_id:
+        store.add_watch(paper_id, user_id)
     return bb.normalize_bundle(bundle)
 
 
@@ -254,9 +304,13 @@ async def refresh_venues(paper_id: str) -> dict[str, Any]:
 
 
 @app.delete("/paper/{paper_id}")
-def delete_paper(paper_id: str) -> list[dict[str, Any]]:
+def delete_paper(
+    paper_id: str,
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+) -> list[dict[str, Any]]:
     store.delete_paper(paper_id)
-    return _library_snapshot()
+    user_id, _ = _identity(x_user_id, None)
+    return _library_snapshot(user_id)
 
 
 class ArchivePatch(BaseModel):
@@ -264,10 +318,120 @@ class ArchivePatch(BaseModel):
 
 
 @app.patch("/paper/{paper_id}")
-def patch_paper(paper_id: str, patch: ArchivePatch) -> list[dict[str, Any]]:
+def patch_paper(
+    paper_id: str,
+    patch: ArchivePatch,
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+) -> list[dict[str, Any]]:
     if not store.set_archived(paper_id, patch.archived):
         raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
-    return _library_snapshot()
+    user_id, _ = _identity(x_user_id, None)
+    return _library_snapshot(user_id)
+
+
+# ---------------------------------------------------------------------------
+# /paper/{id}/notes — user-authored comments and threaded replies
+# ---------------------------------------------------------------------------
+
+
+class NoteAnchorIn(BaseModel):
+    blockIndex: int
+    start: int
+    end: int
+    quote: str = ""
+
+
+class NoteCreate(BaseModel):
+    body: str = Field(..., min_length=1)
+    parentNoteId: str | None = None
+    anchor: NoteAnchorIn | None = None
+
+
+class NoteUpdate(BaseModel):
+    body: str = Field(..., min_length=1)
+
+
+def _require_identity(x_user_id: str | None, x_user_name: str | None) -> tuple[str, str]:
+    user_id, user_name = _identity(x_user_id, x_user_name)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="X-User-Id header is required")
+    return user_id, user_name
+
+
+@app.get("/paper/{paper_id}/notes")
+def list_notes(paper_id: str) -> list[dict[str, Any]]:
+    if not store.paper_exists(paper_id):
+        raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
+    return store.list_notes(paper_id)
+
+
+@app.post("/paper/{paper_id}/notes", status_code=201)
+def create_note(
+    paper_id: str,
+    body: NoteCreate,
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+    x_user_name: str | None = Header(default=None, alias="X-User-Name"),
+) -> dict[str, Any]:
+    user_id, user_name = _require_identity(x_user_id, x_user_name)
+    note_id = f"n_{uuid.uuid4().hex[:10]}"
+    anchor = body.anchor.model_dump() if body.anchor else None
+    note = store.create_note(
+        note_id=note_id,
+        paper_id=paper_id,
+        author_id=user_id,
+        author_name=user_name or user_id,
+        body=body.body.strip(),
+        parent_note_id=body.parentNoteId,
+        anchor=anchor,
+    )
+    if note is None:
+        raise HTTPException(status_code=404, detail="paper or parent note not found")
+    return note
+
+
+@app.patch("/paper/{paper_id}/notes/{note_id}")
+def edit_note(
+    paper_id: str,
+    note_id: str,
+    body: NoteUpdate,
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+    x_user_name: str | None = Header(default=None, alias="X-User-Name"),
+) -> dict[str, Any]:
+    user_id, _ = _require_identity(x_user_id, x_user_name)
+    existing = store.get_note(note_id)
+    if existing is None or existing["paperId"] != paper_id:
+        raise HTTPException(status_code=404, detail=f"note {note_id!r} not found")
+    updated = store.update_note(note_id, user_id, body.body.strip())
+    if updated is None:
+        raise HTTPException(status_code=403, detail="only the note's author can edit it")
+    return updated
+
+
+@app.delete("/paper/{paper_id}/notes/{note_id}", status_code=204)
+def remove_note(
+    paper_id: str,
+    note_id: str,
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+    x_user_name: str | None = Header(default=None, alias="X-User-Name"),
+) -> None:
+    user_id, _ = _require_identity(x_user_id, x_user_name)
+    existing = store.get_note(note_id)
+    if existing is None or existing["paperId"] != paper_id:
+        raise HTTPException(status_code=404, detail=f"note {note_id!r} not found")
+    if not store.delete_note(note_id, user_id):
+        raise HTTPException(status_code=403, detail="only the note's author can delete it")
+
+
+@app.post("/paper/{paper_id}/notes/mark-read", status_code=204)
+def mark_read(
+    paper_id: str,
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+    x_user_name: str | None = Header(default=None, alias="X-User-Name"),
+) -> None:
+    user_id, _ = _require_identity(x_user_id, x_user_name)
+    if not store.paper_exists(paper_id):
+        raise HTTPException(status_code=404, detail=f"paper {paper_id!r} not found")
+    store.mark_notes_read(paper_id, user_id)
 
 
 # ---------------------------------------------------------------------------
