@@ -392,6 +392,11 @@
   position: fixed; inset: 0; z-index: 80;
   background: var(--backdrop);
 }
+/* On wide screens the app content shifts left (see body[data-chat-open]
+   below) so we don't need the modal backdrop — hide it there. */
+@media (min-width: 1100px) {
+  .chat-backdrop { display: none; }
+}
 .chat-panel {
   position: fixed; z-index: 81;
   top: 10px; right: 10px; bottom: 10px;
@@ -403,6 +408,16 @@
   box-shadow: var(--sh-xl);
   overflow: hidden;
 }
+/* When chat is open on a wide viewport, reserve room on the right so the
+   reader rail (and everything else in .app) shifts left instead of being
+   hidden behind the chat panel. */
+@media (min-width: 1100px) {
+  body[data-chat-open] .app {
+    padding-right: 412px; /* 10px right offset + 392px width + ~10px gap */
+    transition: padding-right 240ms cubic-bezier(.22, .61, .36, 1);
+  }
+}
+.app { transition: padding-right 240ms cubic-bezier(.22, .61, .36, 1); }
 .chat-head {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 16px;
@@ -429,6 +444,66 @@
   border-bottom-left-radius: 5px;
   box-shadow: var(--sh-sm);
 }
+
+/* Markdown rendering inside assistant bubbles.
+   react-markdown wraps blocks in <p>, <ul>, <ol>, <h*>, <code>, etc. We
+   collapse the surrounding margins so a short reply doesn't get double
+   spacing, and keep code / tables from overflowing the bubble. */
+.chat-markdown { font-size: 13.5px; line-height: 1.55; }
+.chat-markdown > *:first-child { margin-top: 0; }
+.chat-markdown > *:last-child { margin-bottom: 0; }
+.chat-markdown p { margin: 0 0 0.6em; }
+.chat-markdown p:last-child { margin-bottom: 0; }
+.chat-markdown ul, .chat-markdown ol { margin: 0.35em 0 0.6em; padding-left: 1.35em; }
+.chat-markdown li { margin: 0.15em 0; }
+.chat-markdown li > p { margin: 0; }
+.chat-markdown strong { font-weight: 700; color: var(--text); }
+.chat-markdown em { font-style: italic; }
+.chat-markdown h1, .chat-markdown h2, .chat-markdown h3,
+.chat-markdown h4, .chat-markdown h5, .chat-markdown h6 {
+  font-size: 14px; font-weight: 700; margin: 0.6em 0 0.35em;
+  letter-spacing: -0.01em;
+}
+.chat-markdown code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface-3, rgba(0,0,0,0.06));
+  border: 1px solid var(--line-2);
+}
+.chat-markdown pre {
+  margin: 0.5em 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-3, rgba(0,0,0,0.06));
+  border: 1px solid var(--line-2);
+  overflow-x: auto;
+}
+.chat-markdown pre code {
+  background: transparent; border: none; padding: 0;
+  font-size: 12.5px;
+}
+.chat-markdown blockquote {
+  margin: 0.5em 0;
+  padding: 4px 10px;
+  border-left: 3px solid var(--accent-soft);
+  color: var(--text-2);
+  background: var(--surface-3, rgba(0,0,0,0.03));
+  border-radius: 4px;
+}
+.chat-markdown a { color: var(--accent-deep); text-decoration: underline; }
+.chat-markdown table {
+  border-collapse: collapse;
+  margin: 0.4em 0;
+  font-size: 12.5px;
+}
+.chat-markdown th, .chat-markdown td {
+  border: 1px solid var(--line-2);
+  padding: 4px 8px;
+}
+.chat-markdown th { background: var(--surface-3, rgba(0,0,0,0.04)); }
+.chat-markdown hr { border: none; border-top: 1px solid var(--line-2); margin: 0.6em 0; }
 .chat-caret {
   display: inline-block; width: 7px; height: 14px;
   background: var(--accent); border-radius: 2px;

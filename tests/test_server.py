@@ -436,3 +436,155 @@ def test_progress_payload_no_paper_id_when_absent():
     p = server._progress_payload(2)
     assert "paperId" not in p
     assert p["done"] is False
+
+
+# ---------------------------------------------------------------------------
+# POST /chat — multi-turn chat grounded in a ReviewBundle
+# ---------------------------------------------------------------------------
+
+
+def _fake_chat_bundle(paper_id: str = "p_chat") -> dict:
+    return {
+        "paper": {
+            "title": "Chat Test Paper", "authors": "Alice, Bob", "venue": "",
+            "pages": 12, "words": 4000, "figures": 1, "refs": 8,
+            "overall": 68, "recommendation": "minor",
+        },
+        "scores": {c: 68 for c in bb.CATEGORY_IDS},
+        "manuscript": [{"type": "p", "section": "Body", "runs": [{"t": "..."}]}],
+        "annotations": [
+            {"id": "a1", "cat": "writing", "sev": "moderate", "section": "Intro",
+             "title": "Vague opening", "excerpt": "It has been shown...",
+             "comment": "This lacks a citation and reads as hearsay.", "origin": "ai"},
+        ],
+        "visuals": [], "related": [],
+        "missingRefs": [{"for": "a1", "text": "seminal foo work", "reason": "Backs the empirical claim"}],
+        "novelty": {"score": 62, "verdict": "Solid", "summary": "s",
+                    "strengths": ["good angle"], "risks": ["overlaps with X"]},
+        "report": {"summary": "S", "strengths": ["a"], "weaknesses": ["b"], "minor": ["c"],
+                   "recommendation": "minor", "confidence": 3},
+        "references": [{"id": "r1", "text": "Foo et al. 2020. In ACL."}],
+    }
+
+
+def _stub_stream(text_chunks):
+    """Return a converse_stream_text stand-in that yields the given chunks."""
+    def _fake(**kwargs):
+        # Return an iterator so the code under test can consume it lazily.
+        return iter(text_chunks)
+    return _fake
+
+
+def test_chat_streams_deltas_and_final_done_event(client, monkeypatch):
+    server._seed_bundle_for_tests("p_chat", _fake_chat_bundle())
+    monkeypatch.setattr(server, "converse_stream_text", _stub_stream(["Hello", " there", "!"]))
+
+    resp = client.post("/chat", json={
+        "paperId": "p_chat",
+        "messages": [{"role": "user", "content": "What are the weaknesses?"}],
+    })
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/event-stream")
+
+    frames = _parse_sse_frames(resp.content)
+    deltas = [f["delta"] for f in frames if "delta" in f]
+    assert deltas == ["Hello", " there", "!"]
+    assert frames[-1] == {"done": True}
+
+
+def test_chat_returns_404_for_unknown_paper(client):
+    resp = client.post("/chat", json={
+        "paperId": "missing",
+        "messages": [{"role": "user", "content": "hi"}],
+    })
+    assert resp.status_code == 404
+
+
+def test_chat_rejects_empty_messages(client):
+    server._seed_bundle_for_tests("p_chat", _fake_chat_bundle())
+    resp = client.post("/chat", json={"paperId": "p_chat", "messages": []})
+    assert resp.status_code == 400
+
+
+def test_chat_rejects_when_last_turn_is_assistant(client):
+    server._seed_bundle_for_tests("p_chat", _fake_chat_bundle())
+    resp = client.post("/chat", json={
+        "paperId": "p_chat",
+        "messages": [
+            {"role": "user", "content": "q1"},
+            {"role": "assistant", "content": "a1"},
+        ],
+    })
+    assert resp.status_code == 400
+
+
+def test_chat_forwards_multi_turn_history_to_bedrock(client, monkeypatch):
+    server._seed_bundle_for_tests("p_chat", _fake_chat_bundle())
+    captured: dict = {}
+
+    def _capturing_stream(**kwargs):
+        captured.update(kwargs)
+        return iter(["ok"])
+    monkeypatch.setattr(server, "converse_stream_text", _capturing_stream)
+
+    client.post("/chat", json={
+        "paperId": "p_chat",
+        "messages": [
+            {"role": "user", "content": "Why did you flag a1?"},
+            {"role": "assistant", "content": "Because the opening ..."},
+            {"role": "user", "content": "How should I rewrite it?"},
+        ],
+    })
+
+    sent = captured["messages"]
+    assert [m["role"] for m in sent] == ["user", "assistant", "user"]
+    assert sent[0]["content"] == [{"text": "Why did you flag a1?"}]
+    assert sent[2]["content"] == [{"text": "How should I rewrite it?"}]
+
+    # System prompt must reference the paper title and annotation id so the LLM
+    # has bundle context to ground its reply in.
+    system_text = captured["system_prompt"]
+    assert "Chat Test Paper" in system_text
+    assert "a1" in system_text
+    assert "Vague opening" in system_text
+
+
+def test_chat_surfaces_bedrock_error_as_sse_frame(client, monkeypatch):
+    server._seed_bundle_for_tests("p_chat", _fake_chat_bundle())
+
+    def _boom(**kwargs):
+        raise RuntimeError("bedrock exploded")
+    monkeypatch.setattr(server, "converse_stream_text", _boom)
+
+    resp = client.post("/chat", json={
+        "paperId": "p_chat",
+        "messages": [{"role": "user", "content": "hi"}],
+    })
+    frames = _parse_sse_frames(resp.content)
+    assert frames[-1]["done"] is True
+    assert "bedrock exploded" in frames[-1]["error"]
+
+
+def test_build_chat_context_omits_manuscript_and_references():
+    bundle = _fake_chat_bundle()
+    ctx = server._build_chat_context(bundle)
+
+    assert "Chat Test Paper" in ctx
+    assert "Vague opening" in ctx
+    assert "CATEGORY SCORES" in ctx
+    # These sections are intentionally left out to keep the chat prompt small:
+    assert "manuscript" not in ctx.lower() or "MANUSCRIPT" not in ctx
+    assert "Foo et al. 2020" not in ctx  # references section excluded
+
+
+def test_to_bedrock_messages_skips_empty_and_unknown_roles():
+    out = server._to_bedrock_messages([
+        {"role": "user", "content": "hello"},
+        {"role": "system", "content": "ignore me"},   # not a valid Bedrock chat role
+        {"role": "assistant", "content": "   "},       # blank -> skip
+        {"role": "user", "content": "still here"},
+    ])
+    assert out == [
+        {"role": "user", "content": [{"text": "hello"}]},
+        {"role": "user", "content": [{"text": "still here"}]},
+    ]

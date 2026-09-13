@@ -6,7 +6,7 @@ import { Icon } from "./Icon";
 import type { IconName } from "./Icon";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import type { ThemePref } from "../hooks/useTheme";
-import type { Account, UserRole } from "../state/AppState";
+import type { Account } from "../state/AppState";
 
 export type SettingsSection = "account" | "appearance" | "notifications" | "help";
 
@@ -100,21 +100,23 @@ function SectionTitle({ title, sub }: { title: string; sub?: string }) {
 function AccountSection({ account, onUpdate }: { account: Account | null; onUpdate: (a: Account) => void }) {
   const [name, setName] = useState(account?.name ?? "");
   const [email, setEmail] = useState(account?.email ?? "");
-  const [role, setRole] = useState<UserRole>(account?.role ?? "student");
-  const [err, setErr] = useState("");
+  const [errs, setErrs] = useState<{ name?: string; email?: string }>({});
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setName(account?.name ?? ""); setEmail(account?.email ?? ""); setRole(account?.role ?? "student");
+    setName(account?.name ?? ""); setEmail(account?.email ?? "");
   }, [account]);
 
-  const dirty = name !== (account?.name ?? "") || email !== (account?.email ?? "") || role !== account?.role;
+  const dirty = name !== (account?.name ?? "") || email !== (account?.email ?? "");
 
   function save(e: FormEvent) {
     e.preventDefault();
-    if (!EMAIL_RE.test(email)) { setErr("Enter a valid email address."); return; }
-    setErr("");
-    onUpdate({ email: email.trim(), role, name: name.trim() || undefined });
+    const next: typeof errs = {};
+    if (!name.trim()) next.name = "Display name is required (shown next to your comments).";
+    if (!EMAIL_RE.test(email)) next.email = "Enter a valid email address.";
+    setErrs(next);
+    if (Object.keys(next).length > 0) return;
+    onUpdate({ email: email.trim(), name: name.trim() });
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
   }
@@ -123,30 +125,16 @@ function AccountSection({ account, onUpdate }: { account: Account | null; onUpda
     <form onSubmit={save}>
       <SectionTitle title="Account" sub="Your profile as it appears across Margin." />
       <div className="field">
-        <label>Full name</label>
-        <input className="input" value={name} placeholder="Your name" onChange={(e) => setName(e.target.value)} />
+        <label>Display name</label>
+        <input className={"input" + (errs.name ? " err" : "")} value={name}
+          placeholder="e.g. Prof. Yamada" onChange={(e) => setName(e.target.value)} />
+        {errs.name && <div className="field-err">{errs.name}</div>}
       </div>
       <div className="field">
         <label>Email</label>
-        <input className={"input" + (err ? " err" : "")} type="email" value={email}
+        <input className={"input" + (errs.email ? " err" : "")} type="email" value={email}
           placeholder="you@university.edu" onChange={(e) => setEmail(e.target.value)} />
-        {err && <div className="field-err">{err}</div>}
-      </div>
-      <div className="field">
-        <label>Role</label>
-        <div className="seg" style={{ width:"100%" }}>
-          {(["student","professor"] as UserRole[]).map((r) => (
-            <button type="button" key={r} className={role === r ? "on" : ""}
-              onClick={() => setRole(r)} style={{ flex:1, position:"relative", textTransform:"capitalize" }}>
-              {role === r && (
-                <motion.span layoutId="settings-role-thumb" transition={{ type:"spring", stiffness:480, damping:38 }}
-                  style={{ position:"absolute", inset:0, background:"var(--surface)", borderRadius:8,
-                    boxShadow:"var(--sh-sm)", zIndex:-1 }}/>
-              )}
-              {r}
-            </button>
-          ))}
-        </div>
+        {errs.email && <div className="field-err">{errs.email}</div>}
       </div>
       <button type="submit" className="btn btn-primary" disabled={!dirty && !saved}
         style={{ opacity: (!dirty && !saved) ? 0.55 : 1 }}>

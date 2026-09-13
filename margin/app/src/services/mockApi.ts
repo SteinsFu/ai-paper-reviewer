@@ -3,8 +3,8 @@
    Serves the sample data with realistic latency so loading
    states are visible and the UI is honest about being async.
    ============================================================ */
-import type { MarginApi } from "./api";
-import type { AnalyzeInput, AnalyzeProgress, ReviewBundle, VenueFieldTag, VenueSuggestions } from "./types";
+import type { CreateNoteInput, MarginApi } from "./api";
+import type { AnalyzeInput, AnalyzeProgress, Note, ReviewBundle, VenueFieldTag, VenueSuggestions } from "./types";
 import { libraryStore } from "./libraryStore";
 import { BUNDLES, PIPELINE } from "../data/mock";
 import { matchScore, venuesFor } from "../data/venues";
@@ -101,4 +101,62 @@ export const mockApi: MarginApi = {
     libraryStore.setArchived(paperId, archived);
     return libraryStore.getSnapshot();
   },
+
+  /* ---- Notes (in-memory per-session store) ------------------------- */
+  async listNotes(paperId: string) {
+    await delay(60);
+    return notesFor(paperId).map((n) => ({ ...n }));
+  },
+  async createNote(paperId: string, input: CreateNoteInput) {
+    await delay(60);
+    const list = notesFor(paperId);
+    const parent = input.parentNoteId
+      ? list.find((n) => n.id === input.parentNoteId)
+      : null;
+    const now = Date.now();
+    const note: Note = {
+      id: `n_${Math.random().toString(36).slice(2, 12)}`,
+      paperId,
+      // Flatten replies-to-replies to the root (Slack-style 1-level threads).
+      parentNoteId: parent ? (parent.parentNoteId ?? parent.id) : null,
+      authorId: "mock@local",
+      authorName: "You",
+      body: input.body,
+      anchor: input.anchor ?? null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    list.push(note);
+    return { ...note };
+  },
+  async updateNote(paperId: string, noteId: string, body: string) {
+    await delay(40);
+    const list = notesFor(paperId);
+    const n = list.find((x) => x.id === noteId);
+    if (!n) throw new Error(`note ${noteId} not found`);
+    n.body = body;
+    n.updatedAt = Date.now();
+    return { ...n };
+  },
+  async deleteNote(paperId: string, noteId: string) {
+    await delay(40);
+    const list = notesFor(paperId);
+    const idx = list.findIndex((x) => x.id === noteId);
+    if (idx >= 0) list.splice(idx, 1);
+    // cascade replies
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i].parentNoteId === noteId) list.splice(i, 1);
+    }
+  },
+  async markNotesRead(_paperId: string) {
+    await delay(20);
+  },
 };
+
+/* In-memory per-session notes so the mock can demonstrate the flow without
+   the FastAPI server. Resets on page reload. */
+const _mockNotes: Record<string, Note[]> = {};
+function notesFor(paperId: string): Note[] {
+  if (!_mockNotes[paperId]) _mockNotes[paperId] = [];
+  return _mockNotes[paperId];
+}

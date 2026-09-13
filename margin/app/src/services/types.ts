@@ -208,9 +208,14 @@ export interface LibraryPaper {
   title: string;
   authors: string;
   venue: string;
+  /** email of the user who uploaded the paper; may be "" for anonymous uploads */
+  ownerId?: string;
+  ownerName?: string;
   status: "in-review" | "done" | "draft";
   score: number | null;
   issues: number;
+  /** notes on this paper by other users that the caller has not yet read */
+  unreadNotes?: number;
   updated: string;
   /** machine-readable timestamp beside the display string `updated` (analytics / version order) */
   updatedAt?: number;
@@ -219,6 +224,24 @@ export interface LibraryPaper {
   archived?: boolean;
   /** seeded revision history for the compare view */
   versions?: PaperVersion[];
+}
+
+/* ---- User-authored notes / comments -------------------------------------
+   Notes are the human counterpart to AI annotations. Any authenticated user
+   with the paper's id can add root notes and reply once (1-level threads,
+   Slack-style). Notes may optionally anchor to a specific passage inside a
+   ManuscriptBlock via `anchor`. */
+export interface Note {
+  id: string;
+  paperId: string;
+  /** null for root notes; set to a root note's id for replies. */
+  parentNoteId: string | null;
+  authorId: string;
+  authorName: string;
+  body: string;
+  anchor: TextAnchor | null;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface PipelineStep {

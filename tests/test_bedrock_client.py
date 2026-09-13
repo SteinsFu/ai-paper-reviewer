@@ -106,3 +106,85 @@ def test_get_client_skips_login_provider_when_bearer_token_set(monkeypatch):
 def test_haiku_and_sonnet_ids_are_ap_southeast_inference_profiles():
     assert bedrock_client.HAIKU_4_5.startswith("au.anthropic.claude-haiku-4-5-")
     assert bedrock_client.SONNET_4_5.startswith("au.anthropic.claude-sonnet-4-5-")
+
+
+# ---------------------------------------------------------------------------
+# converse_stream_text
+# ---------------------------------------------------------------------------
+
+
+def _stream_response(events: list[dict]) -> dict:
+    """Shape a mocked ConverseStream response."""
+    return {"stream": events}
+
+
+def test_converse_stream_text_yields_text_deltas_in_order():
+    client = MagicMock()
+    client.converse_stream.return_value = _stream_response([
+        {"messageStart": {"role": "assistant"}},
+        {"contentBlockStart": {}},
+        {"contentBlockDelta": {"delta": {"text": "Hello"}}},
+        {"contentBlockDelta": {"delta": {"text": " there"}}},
+        {"contentBlockDelta": {"delta": {"text": "!"}}},
+        {"messageStop": {}},
+        {"metadata": {}},
+    ])
+
+    chunks = list(bedrock_client.converse_stream_text(
+        model_id="model-x",
+        system_prompt="sp",
+        messages=[{"role": "user", "content": [{"text": "hi"}]}],
+        client=client,
+    ))
+
+    assert chunks == ["Hello", " there", "!"]
+    kwargs = client.converse_stream.call_args.kwargs
+    assert kwargs["modelId"] == "model-x"
+    assert kwargs["system"] == [{"text": "sp"}]
+    assert kwargs["messages"] == [{"role": "user", "content": [{"text": "hi"}]}]
+
+
+def test_converse_stream_text_skips_delta_events_with_no_text():
+    client = MagicMock()
+    client.converse_stream.return_value = _stream_response([
+        {"contentBlockDelta": {"delta": {}}},          # no text -> skip
+        {"contentBlockDelta": {"delta": {"text": ""}}},  # empty -> skip
+        {"contentBlockDelta": {"delta": {"text": "OK"}}},
+    ])
+
+    chunks = list(bedrock_client.converse_stream_text(
+        model_id="m", system_prompt="", messages=[], client=client,
+    ))
+
+    assert chunks == ["OK"]
+
+
+def test_converse_stream_text_raises_on_stream_error_event():
+    client = MagicMock()
+    client.converse_stream.return_value = _stream_response([
+        {"contentBlockDelta": {"delta": {"text": "partial"}}},
+        {"internalServerException": {"message": "boom"}},
+    ])
+
+    it = bedrock_client.converse_stream_text(
+        model_id="m", system_prompt="", messages=[], client=client,
+    )
+    assert next(it) == "partial"
+    with pytest.raises(RuntimeError, match="Bedrock stream error"):
+        next(it)
+
+
+def test_converse_stream_text_accepts_multi_turn_messages():
+    client = MagicMock()
+    client.converse_stream.return_value = _stream_response([])
+    msgs = [
+        {"role": "user", "content": [{"text": "q1"}]},
+        {"role": "assistant", "content": [{"text": "a1"}]},
+        {"role": "user", "content": [{"text": "q2"}]},
+    ]
+
+    list(bedrock_client.converse_stream_text(
+        model_id="m", system_prompt="", messages=msgs, client=client,
+    ))
+
+    assert client.converse_stream.call_args.kwargs["messages"] == msgs
