@@ -5,7 +5,7 @@ role-creation rights**. One Ubuntu VM runs:
 
 - **Docker** — FastAPI (`server.py`) on `127.0.0.1:8000`
 - **nginx** — serves the React SPA and reverse-proxies `/analyze`,
-  `/library`, `/paper`
+  `/chat`, `/library`, `/paper`
 
 The public URL is `http://ELASTIC_IP`. Same origin, so you do **not**
 set `MARGIN_ALLOWED_ORIGINS`. Bedrock auth is **`AWS_BEARER_TOKEN_BEDROCK`**
@@ -25,6 +25,7 @@ die in ≤12 h and `/analyze` breaks until you rotate the env var.
 browser  →  http://ELASTIC_IP  (nginx :80)
               ├── /           →  /var/www/margin  (Vite dist)
               ├── /analyze    →  Docker :8000     (SSE, 180s timeout)
+              ├── /chat       →  Docker :8000     (SSE, 180s timeout)
               ├── /library    →  Docker :8000
               └── /paper      →  Docker :8000
 ```
@@ -257,6 +258,18 @@ server {
         proxy_send_timeout 180s;
     }
 
+    # Same SSE settings as /analyze. Without this block, POST /chat
+    # hits `location /` (static SPA) and nginx returns 405.
+    location /chat {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_read_timeout 180s;
+        proxy_send_timeout 180s;
+    }
+
     location /library { proxy_pass http://127.0.0.1:8000; }
     location /paper { proxy_pass http://127.0.0.1:8000; }
 }
@@ -275,11 +288,14 @@ Browser: `http://EIP` (app), `http://EIP/docs` (Swagger).
 1. Open `http://EIP`. Mock sign-in (any email, 8+ character password).
 2. **New review**. Upload a **short** PDF.
 3. Analyzing should stream and land on Reader.
+4. Open chat (⌘J). Send one message. Tokens should stream. A `405`
+   nginx HTML page means `/chat` is not proxied — re-apply Phase 8.
 
 | Failure | Check |
 |---|---|
 | Site loads, reviews are fake | SPA built without `VITE_API_MODE=http` |
 | Calls `localhost:8000` | `VITE_API_BASE_URL` was unset; rebuild with empty `=` |
+| Chat returns `405 Not Allowed` | nginx has no `location /chat`. Re-run Phase 8 (or add that block) then `sudo nginx -t && sudo systemctl reload nginx` |
 | Bedrock / expired token | `docker logs margin`; new long-term key; `docker rm -f margin` and `docker run` again |
 | CORS errors | Should not happen on this setup; you are same-origin |
 | 413 / file too large | nginx still at the 1 MB default. Redeploy, or add `client_max_body_size 50M;` and `sudo nginx -t && sudo systemctl reload nginx` |
@@ -290,6 +306,10 @@ mount). Rebuilds keep the library. Omit the mount and a new container starts emp
 ---
 
 ## Updating later
+
+`git pull` plus a dist copy does **not** change `/etc/nginx/sites-available/margin`.
+If proxy routes changed (e.g. `/chat`), re-run the Phase 8 `sudo tee …` block,
+then `sudo nginx -t && sudo systemctl reload nginx`.
 
 **Website**
 
